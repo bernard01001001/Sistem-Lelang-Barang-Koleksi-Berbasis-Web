@@ -43,4 +43,26 @@ router.post('/signup', async (req, res) => {
     }
 });
 
+// --- UPDATE PROFILE ---
+router.put('/update-profile/:id_user', async (req, res) => {
+    try {
+        const { id_user } = req.params;
+        const { nama_lengkap, no_hp, alamat } = req.body;
+        const pool = await getConnection();
+
+        await pool.request()
+            .input('id', sql.Int, id_user)
+            .input('nama', sql.VarChar, nama_lengkap)
+            .input('hp', sql.VarChar, no_hp)
+            .input('alamat', sql.Text, alamat)
+            .query(`UPDATE tbl_user 
+                    SET nama_lengkap = @nama, no_hp = @hp, alamat = @alamat 
+                    WHERE id_user = @id`);
+
+        res.json({ message: "Profil berhasil diperbarui!" });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 module.exports = router;

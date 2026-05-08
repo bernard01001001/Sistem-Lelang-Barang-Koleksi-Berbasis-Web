@@ -29,4 +29,41 @@ router.get('/users', async (req, res) => {
     }
 });
 
+// --- TUTUP LELANG & TENTUKAN PEMENANG ---
+router.post('/tutup-lelang/:id_barang', async (req, res) => {
+    try {
+        const { id_barang } = req.params;
+        const pool = await getConnection();
+
+        // Ambil penawar tertinggi dari tbl_lelang
+        const winnerResult = await pool.request()
+            .input('id_b', sql.Int, id_barang)
+            .query(`SELECT TOP 1 id_penawar, harga_penawaran 
+                    FROM tbl_lelang 
+                    WHERE id_barang = @id_b 
+                    ORDER BY harga_penawaran DESC`);
+
+        if (winnerResult.recordset.length === 0) {
+            return res.status(404).json({ message: "Tidak ada penawar untuk barang ini." });
+        }
+
+        const pemenang = winnerResult.recordset[0];
+
+        // Update status barang menjadi 'Sold' dan catat pemenangnya
+        await pool.request()
+            .input('id_b', sql.Int, id_barang)
+            .input('id_p', sql.Int, pemenang.id_penawar)
+            .query(`UPDATE tbl_barang 
+                    SET status_barang = 'Sold'
+                    WHERE id_barang = @id_b`);
+
+        res.json({ 
+            message: "Lelang berhasil ditutup!", 
+            pemenang: pemenang 
+        });
+    } catch (err) {
+        res.status(500).send("Gagal menutup lelang: " + err.message);
+    }
+});
+
 module.exports = router;
