@@ -90,4 +90,30 @@ router.get('/saya/:id_pelelang', async (req, res) => {
     }
 });
 
+// --- BARANG YANG DIMENANGKAN (Role: Penawar) ---
+router.get('/menang/:id_penawar', async (req, res) => {
+    try {
+        const { id_penawar } = req.params;
+        const pool = await getConnection();
+        
+        // cari di tbl_lelang harga tertinggi yang dimiliki user ini untuk barang yang sudah 'Sold'
+        const result = await pool.request()
+            .input('id_p', sql.Int, id_penawar)
+            .query(`
+                SELECT b.id_barang, b.nama_barang, b.harga_sekarang as harga_final, b.tgl_selesai
+                FROM tbl_barang b
+                WHERE b.status_barang = 'Sold' 
+                AND b.harga_sekarang = (
+                    SELECT MAX(harga_penawaran) 
+                    FROM tbl_lelang l 
+                    WHERE l.id_barang = b.id_barang AND l.id_penawar = @id_p
+                )
+            `);
+            
+        res.json(result.recordset);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 module.exports = router;
