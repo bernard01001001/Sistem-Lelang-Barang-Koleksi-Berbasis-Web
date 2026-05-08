@@ -75,4 +75,19 @@ router.post('/tambah', async (req, res) => {
     }
 });
 
+// --- LIHAT BARANG SAYA (Pelelang) ---
+router.get('/saya/:id_pelelang', async (req, res) => {
+    try {
+        const { id_pelelang } = req.params;
+        const pool = await getConnection();
+        const result = await pool.request()
+            .input('id_p', sql.Int, id_pelelang)
+            .query("SELECT * FROM tbl_barang WHERE id_pelelang = @id_p");
+        
+        res.json(result.recordset);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 module.exports = router;
