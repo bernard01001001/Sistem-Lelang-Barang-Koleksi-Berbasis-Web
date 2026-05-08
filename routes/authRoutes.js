@@ -1,36 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs'); // Tambahkan ini
 const { sql, getConnection } = require('../config/db');
 
-// --- LOGIN ---
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const pool = await getConnection(); 
-        const result = await pool.request()
-            .input('email', sql.VarChar, email)
-            .input('password', sql.VarChar, password)
-            .query("SELECT * FROM tbl_user WHERE email = @email AND password = @password AND status_akun = 'Aktif'");
-
-        if (result.recordset.length > 0) {
-            res.json({ message: "Login Berhasil", user: result.recordset[0] });
-        } else {
-            res.status(401).json({ message: "Gagal Login" });
-        }
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-// --- SIGNUP ---
+// --- SIGNUP DENGAN HASHING ---
 router.post('/signup', async (req, res) => {
     try {
         const { nama_lengkap, email, password, no_hp, alamat, role } = req.body;
         const pool = await getConnection(); 
+
+        // 1. Hash password (10 adalah salt rounds)
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         await pool.request()
             .input('nama', sql.VarChar, nama_lengkap)
             .input('email', sql.VarChar, email)
-            .input('password', sql.VarChar, password)
+            .input('password', sql.VarChar, hashedPassword) // Simpan yang sudah di-hash
             .input('no_hp', sql.VarChar, no_hp)
             .input('alamat', sql.Text, alamat)
             .input('role', sql.VarChar, role)
@@ -43,23 +28,32 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// --- UPDATE PROFILE ---
-router.put('/update-profile/:id_user', async (req, res) => {
+// --- LOGIN DENGAN PENGECEKAN HASH ---
+router.post('/login', async (req, res) => {
     try {
-        const { id_user } = req.params;
-        const { nama_lengkap, no_hp, alamat } = req.body;
-        const pool = await getConnection();
+        const { email, password } = req.body;
+        const pool = await getConnection(); 
+        
+        const result = await pool.request()
+            .input('email', sql.VarChar, email)
+            .query("SELECT * FROM tbl_user WHERE email = @email AND status_akun = 'Aktif'");
 
-        await pool.request()
-            .input('id', sql.Int, id_user)
-            .input('nama', sql.VarChar, nama_lengkap)
-            .input('hp', sql.VarChar, no_hp)
-            .input('alamat', sql.Text, alamat)
-            .query(`UPDATE tbl_user 
-                    SET nama_lengkap = @nama, no_hp = @hp, alamat = @alamat 
-                    WHERE id_user = @id`);
-
-        res.json({ message: "Profil berhasil diperbarui!" });
+        if (result.recordset.length > 0) {
+            const user = result.recordset[0];
+            
+            // 2. Bandingkan password input dengan hash di DB
+            const isMatch = await bcrypt.compare(password, user.password);
+            
+            if (isMatch) {
+                // Hapus password dari object sebelum dikirim ke client agar aman
+                delete user.password;
+                res.json({ message: "Login Berhasil", user });
+            } else {
+                res.status(401).json({ message: "Password salah!" });
+            }
+        } else {
+            res.status(401).json({ message: "Email tidak ditemukan!" });
+        }
     } catch (err) {
         res.status(500).send(err.message);
     }
