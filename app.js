@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+const { sql, getConnection } = require('./config/db');
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
