@@ -46,4 +46,33 @@ router.post('/bid', async (req, res) => {
     }
 });
 
+// --- TAMBAH BARANG BARU (Role: Pelelang) ---
+router.post('/tambah', async (req, res) => {
+    try {
+        const { id_pelelang, nama_barang, deskripsi, harga_awal, tgl_selesai } = req.body;
+        const pool = await getConnection();
+
+        // Validasi: Pastikan harga_awal tidak minus
+        if (harga_awal < 0) {
+            return res.status(400).json({ message: "Harga awal tidak boleh kurang dari 0" });
+        }
+
+        // Query Insert (status_barang default 'Pending' menunggu verifikasi admin)
+        await pool.request()
+            .input('id_p', sql.Int, id_pelelang)
+            .input('nama', sql.VarChar, nama_barang)
+            .input('desc', sql.Text, deskripsi)
+            .input('harga', sql.Decimal(18, 2), harga_awal)
+            .input('selesai', sql.DateTime, tgl_selesai)
+            .query(`INSERT INTO tbl_barang 
+                    (id_pelelang, nama_barang, deskripsi, harga_awal, harga_sekarang, tgl_mulai, tgl_selesai, status_barang) 
+                    VALUES (@id_p, @nama, @desc, @harga, @harga, GETDATE(), @selesai, 'Pending')`);
+
+        res.status(201).json({ message: "Barang berhasil diajukan! Menunggu verifikasi admin." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Gagal menambah barang: " + err.message);
+    }
+});
+
 module.exports = router;
