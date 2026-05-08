@@ -66,4 +66,22 @@ router.post('/tutup-lelang/:id_barang', async (req, res) => {
     }
 });
 
+// --- DASHBOARD ADMIN (Ringkasan Sistem) ---
+router.get('/dashboard-stats', async (req, res) => {
+    try {
+        const pool = await getConnection();
+        const result = await pool.request().query(`
+            SELECT 
+                (SELECT COUNT(*) FROM tbl_user) as total_user,
+                (SELECT COUNT(*) FROM tbl_barang WHERE status_barang = 'Open') as lelang_aktif,
+                (SELECT COUNT(*) FROM tbl_barang WHERE status_barang = 'Sold') as barang_terjual,
+                (SELECT SUM(harga_sekarang) FROM tbl_barang WHERE status_barang = 'Sold') as total_omzet
+        `);
+        
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).send("Gagal mengambil statistik: " + err.message);
+    }
+});
+
 module.exports = router;
