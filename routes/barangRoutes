@@ -1,0 +1,49 @@
+const express = require('express');
+const router = express.Router();
+const { sql, getConnection } = require('../config/db');
+
+// --- LIHAT SEMUA BARANG ---
+router.get('/', async (req, res) => {
+    try {
+        const pool = await getConnection();
+        const result = await pool.request()
+            .query("SELECT * FROM tbl_barang WHERE status_barang = 'Open'");
+        res.json(result.recordset);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+// --- PROSES BIDDING ---
+router.post('/bid', async (req, res) => {
+    try {
+        const { id_barang, id_penawar, nominal_bid } = req.body;
+        const pool = await getConnection();
+
+        // Cek harga terakhir
+        const item = await pool.request()
+            .input('id', sql.Int, id_barang)
+            .query("SELECT harga_sekarang FROM tbl_barang WHERE id_barang = @id");
+
+        if (nominal_bid <= item.recordset[0].harga_sekarang) {
+            return res.status(400).json({ message: "Bid harus lebih tinggi dari harga saat ini!" });
+        }
+
+        // Update harga & simpan riwayat (transaksi sederhana)
+        await pool.request()
+            .input('bid', sql.Decimal(18,2), nominal_bid)
+            .input('id_b', sql.Int, id_barang)
+            .input('id_p', sql.Int, id_penawar)
+            .query(`
+                UPDATE tbl_barang SET harga_sekarang = @bid WHERE id_barang = @id_b;
+                INSERT INTO tbl_lelang (id_barang, id_penawar, harga_penawaran, waktu_penawaran) 
+                VALUES (@id_b, @id_p, @bid, GETDATE());
+            `);
+
+        res.json({ message: "Berhasil menawar!" });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+module.exports = router;
