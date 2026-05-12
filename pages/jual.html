@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jual Barang - KOLEKU</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container" style="max-width:800px; margin:40px auto; padding:20px;">
+    <h1 style="text-align:center; color:#b8860b; margin-bottom:20px;">Jual Barang ke KOLEKU</h1>
+    <p style="text-align:center; color:#666; margin-bottom:30px;">Isi data barang yang ingin kamu jual atau lelang</p>
+
+    <form style="background:white; padding:30px; border-radius:8px; border:2px solid #e5d9c8;" onsubmit="handleJual(event)">
+      
+      <div class="form-group">
+        <label>Nama Barang</label>
+        <input type="text" id="namaBarang" placeholder="Contoh: Lampu Tiffany Antik" required>
+      </div>
+
+      <div class="form-group">
+        <label>Harga Awal / Tawaran</label>
+        <input type="number" id="hargaAwal" placeholder="Rp" required>
+      </div>
+
+      <div class="form-group">
+        <label>Kategori</label>
+        <select id="kategori" required>
+          <option value="">Pilih Kategori</option>
+          <option value="Antik & Seni">Antik & Seni</option>
+          <option value="Aksesoris">Aksesoris</option>
+          <option value="Kerajinan">Kerajinan</option>
+          <option value="Dekorasi">Dekorasi</option>
+          <option value="Fashion">Fashion</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Deskripsi Barang</label>
+        <textarea id="deskripsi" rows="4" placeholder="Jelaskan kondisi, tahun pembuatan, dll..." required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Tambahkan Gambar Barang</label>
+        <input type="file" id="gambarBarang" accept="image/*" multiple onchange="previewGambar(event)">
+        <div id="previewContainer" style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;"></div>
+      </div>
+
+      <button type="submit" class="btn" style="width:100%; padding:14px; font-size:16px;">
+        Pasang Barang untuk Dijual / Dilelang
+      </button>
+    </form>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="../assets/js/script.js"></script>
+  <script>
+    function previewGambar(event) {
+      const files = event.target.files;
+      const previewContainer = document.getElementById('previewContainer');
+      previewContainer.innerHTML = '';
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          const imgWrapper = document.createElement('div');
+          imgWrapper.style.position = 'relative';
+          imgWrapper.style.display = 'inline-block';
+
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.style.width = '100px';
+          img.style.height = '100px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '6px';
+          img.style.border = '2px solid #e5d9c8';
+
+          imgWrapper.appendChild(img);
+          previewContainer.appendChild(imgWrapper);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function handleJual(e) {
+      e.preventDefault();
+      alert("✅ Barang berhasil dipasang!\n\nBarang kamu sekarang masuk ke daftar lelang.");
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
