@@ -1,11 +1,25 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jual Barang - KOLEKU</title>
   <link rel="stylesheet" href="../assets/css/styles.css">
+  <style>
+    /* Hide native number input spinner arrows */
+    #hargaAwal::-webkit-outer-spin-button,
+    #hargaAwal::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    #hargaAwal {
+      -moz-appearance: textfield;
+    }
+  </style>
 </head>
+
 <body>
 
   <div id="navbar"></div>
@@ -14,8 +28,9 @@
     <h1 style="text-align:center; color:#b8860b; margin-bottom:20px;">Jual Barang ke KOLEKU</h1>
     <p style="text-align:center; color:#666; margin-bottom:30px;">Isi data barang yang ingin kamu jual atau lelang</p>
 
-    <form style="background:white; padding:30px; border-radius:8px; border:2px solid #e5d9c8;" onsubmit="handleJual(event)">
-      
+    <form style="background:white; padding:30px; border-radius:8px; border:2px solid #e5d9c8;"
+      onsubmit="handleJual(event)">
+
       <div class="form-group">
         <label>Nama Barang</label>
         <input type="text" id="namaBarang" placeholder="Contoh: Lampu Tiffany Antik" required>
@@ -23,7 +38,23 @@
 
       <div class="form-group">
         <label>Harga Awal / Tawaran</label>
-        <input type="number" id="hargaAwal" placeholder="Rp" required>
+        <div
+          style="display:flex;align-items:center;gap:0;border:2px solid #b8860b;border-radius:6px;overflow:hidden;background:white;">
+          <button type="button" onclick="kurangiHarga()"
+            style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#f8f1e3,#efe6d5);font-size:22px;font-weight:bold;color:#b8860b;cursor:pointer;transition:background 0.2s;"
+            onmouseover="this.style.background='#e8d9c0'"
+            onmouseout="this.style.background='linear-gradient(135deg,#f8f1e3,#efe6d5)'">−</button>
+          <input type="number" id="hargaAwal" placeholder="Rp 100.000" min="100000" value="100000" required
+            style="flex:1;border:none;border-left:1px solid #e5d9c8;border-right:1px solid #e5d9c8;text-align:center;font-size:18px;font-weight:bold;padding:12px;outline:none;"
+            oninput="updateHargaPreview()">
+          <button type="button" onclick="tambahHarga()"
+            style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#b8860b,#d4a017);font-size:22px;font-weight:bold;color:white;cursor:pointer;transition:background 0.2s;"
+            onmouseover="this.style.background='#a07509'"
+            onmouseout="this.style.background='linear-gradient(135deg,#b8860b,#d4a017)'">+</button>
+        </div>
+        <div id="hargaPreview" style="margin-top:8px;font-size:14px;color:#b8860b;font-weight:600;">Rp 100.000</div>
+        <div style="margin-top:4px;font-size:11px;color:#999;">Minimum Rp 100.000 • Tombol +/- menambah/kurangi 10%
+        </div>
       </div>
 
       <div class="form-group">
@@ -44,8 +75,22 @@
       </div>
 
       <div class="form-group">
+        <label>Durasi Lelang</label>
+        <select id="durasiLelang" required>
+          <option value="">Pilih Durasi</option>
+          <option value="1">1 Jam</option>
+          <option value="3">3 Jam</option>
+          <option value="6">6 Jam</option>
+          <option value="12">12 Jam</option>
+          <option value="24" selected>1 Hari (24 Jam)</option>
+          <option value="72">3 Hari</option>
+          <option value="168">7 Hari</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>Tambahkan Gambar Barang</label>
-        <input type="file" id="gambarBarang" accept="image/*" multiple onchange="previewGambar(event)">
+        <input type="file" id="gambarBarang" accept="image/*" onchange="previewGambar(event)">
         <div id="previewContainer" style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;"></div>
       </div>
 
@@ -53,46 +98,163 @@
         Pasang Barang untuk Dijual / Dilelang
       </button>
     </form>
+
+    <!-- Success message (hidden by default) -->
+    <div id="jual-sukses"
+      style="display:none; text-align:center; padding:40px; background:white; border-radius:12px; border:2px solid #e5d9c8;">
+      <div
+        style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#b8860b,#d4a017);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;color:white;">
+        ✓</div>
+      <h2 style="color:#b8860b;margin-bottom:10px;">Barang Berhasil Dipasang!</h2>
+      <p style="color:#666;margin-bottom:8px;">Barang kamu sekarang sudah masuk ke daftar lelang KOLEKU.</p>
+      <div id="jual-detail" style="background:#f8f1e3;padding:16px;border-radius:8px;margin:20px 0;text-align:left;">
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">
+        <a href="kategori.html" class="btn">Lihat Semua Barang</a>
+        <a href="jual.html" class="btn" style="background:white;color:#b8860b;border:2px solid #b8860b;">Jual Lagi</a>
+      </div>
+    </div>
   </div>
 
   <div id="footer"></div>
 
   <script src="../assets/js/script.js"></script>
   <script>
+    var uploadedImageData = null;
+
     function previewGambar(event) {
-      const files = event.target.files;
+      const file = event.target.files[0];
       const previewContainer = document.getElementById('previewContainer');
       previewContainer.innerHTML = '';
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
+      if (!file) return;
 
-        reader.onload = function(e) {
-          const imgWrapper = document.createElement('div');
-          imgWrapper.style.position = 'relative';
-          imgWrapper.style.display = 'inline-block';
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        uploadedImageData = e.target.result;
 
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.style.width = '100px';
-          img.style.height = '100px';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = '6px';
-          img.style.border = '2px solid #e5d9c8';
+        const imgWrapper = document.createElement('div');
+        imgWrapper.style.position = 'relative';
+        imgWrapper.style.display = 'inline-block';
 
-          imgWrapper.appendChild(img);
-          previewContainer.appendChild(imgWrapper);
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.width = '120px';
+        img.style.height = '120px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '8px';
+        img.style.border = '2px solid #b8860b';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.type = 'button';
+        removeBtn.style.cssText = 'position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:none;background:#c0392b;color:white;font-size:12px;cursor:pointer;';
+        removeBtn.onclick = function () {
+          uploadedImageData = null;
+          previewContainer.innerHTML = '';
+          document.getElementById('gambarBarang').value = '';
         };
-        reader.readAsDataURL(file);
+
+        imgWrapper.appendChild(img);
+        imgWrapper.appendChild(removeBtn);
+        previewContainer.appendChild(imgWrapper);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    var HARGA_MINIMUM = 100000;
+
+    function tambahHarga() {
+      var input = document.getElementById('hargaAwal');
+      var current = parseInt(input.value) || HARGA_MINIMUM;
+      var step = Math.round(current * 0.10);
+      if (step < 10000) step = 10000;
+      input.value = current + step;
+      updateHargaPreview();
+    }
+
+    function kurangiHarga() {
+      var input = document.getElementById('hargaAwal');
+      var current = parseInt(input.value) || HARGA_MINIMUM;
+      var step = Math.round(current * 0.10);
+      if (step < 10000) step = 10000;
+      var newVal = current - step;
+      if (newVal < HARGA_MINIMUM) newVal = HARGA_MINIMUM;
+      input.value = newVal;
+      updateHargaPreview();
+    }
+
+    function updateHargaPreview() {
+      var input = document.getElementById('hargaAwal');
+      var val = parseInt(input.value) || 0;
+      if (val < HARGA_MINIMUM) {
+        input.value = HARGA_MINIMUM;
+        val = HARGA_MINIMUM;
       }
+      document.getElementById('hargaPreview').textContent = 'Rp ' + val.toLocaleString('id-ID');
     }
 
     function handleJual(e) {
       e.preventDefault();
-      alert("✅ Barang berhasil dipasang!\n\nBarang kamu sekarang masuk ke daftar lelang.");
-      window.location.href = "index.html";
+
+      var user = localStorage.getItem("koleku_user");
+      if (!user) {
+        alert("Silakan login dulu untuk menjual barang.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      var nama = document.getElementById('namaBarang').value.trim();
+      var harga = parseInt(document.getElementById('hargaAwal').value) || 0;
+      var kategori = document.getElementById('kategori').value;
+      var deskripsi = document.getElementById('deskripsi').value.trim();
+      var durasi = parseInt(document.getElementById('durasiLelang').value) || 24;
+
+      if (!nama || !kategori || !deskripsi) {
+        alert("Semua field wajib diisi!");
+        return;
+      }
+      if (harga < HARGA_MINIMUM) {
+        alert('Harga minimum adalah Rp ' + HARGA_MINIMUM.toLocaleString('id-ID'));
+        return;
+      }
+
+      // Generate unique ID
+      var newId = Date.now();
+      var endTime = Date.now() + (durasi * 60 * 60 * 1000);
+
+      // Build product object
+      var newItem = {
+        id: newId,
+        nama: nama,
+        deskripsi: deskripsi,
+        hargaAwal: harga,
+        hargaTertinggi: harga,
+        kategori: kategori,
+        sisaWaktu: durasi + " jam",
+        gambar: uploadedImageData || "",
+        penjual: user,
+        endTime: endTime,
+        createdAt: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+      };
+
+      // Save to localStorage
+      var userItems = JSON.parse(localStorage.getItem("koleku_jualan") || "[]");
+      userItems.push(newItem);
+      localStorage.setItem("koleku_jualan", JSON.stringify(userItems));
+
+      // Show success
+      document.querySelector('form').style.display = 'none';
+      var sukses = document.getElementById('jual-sukses');
+      sukses.style.display = 'block';
+
+      document.getElementById('jual-detail').innerHTML =
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Nama Barang:</span><b>' + nama + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Harga Awal:</span><b>Rp ' + harga.toLocaleString('id-ID') + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Kategori:</span><b>' + kategori + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span>Durasi Lelang:</span><b>' + durasi + ' Jam</b></div>';
     }
   </script>
 </body>
+
 </html>

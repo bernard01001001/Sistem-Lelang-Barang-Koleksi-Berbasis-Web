@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pembayaran Berhasil - KOLEKU</title>
+  <meta name="description" content="Pembayaran berhasil! Terima kasih telah berbelanja di KOLEKU">
   <link rel="stylesheet" href="../assets/css/styles.css">
   <link rel="icon" href="../assets/images/logo.png">
 </head>
@@ -11,24 +12,31 @@
   <div id="navbar"></div>
 
   <div class="container">
-    <div class="success-box">
-      <div class="success-icon">&#10004;</div>
-      <h2>Pembayaran Berhasil!</h2>
-      <p>
+    <div style="max-width:520px; margin:40px auto; text-align:center;">
+      <!-- Animated Checkmark -->
+      <div class="success-checkmark">
+        <div class="check-icon"></div>
+      </div>
+
+      <h2 style="color:#27ae60; margin-bottom:6px; font-size:24px;">Pembayaran Berhasil!</h2>
+      <p style="color:#666; font-size:14px; margin-bottom:24px;">
         Terima kasih, pembayaran Anda telah diterima.<br>
         Barang akan segera diproses dan dikirim ke alamat Anda.
       </p>
 
-      <div id="pembayaran-detail" style="background:#f4f4f4;padding:12px;border-radius:6px;margin-bottom:16px;text-align:left;font-size:14px"></div>
+      <!-- Receipt Card -->
+      <div id="pembayaran-receipt"></div>
 
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <a href="barang-saya.html" class="btn">Lihat Barang Saya</a>
-        <a href="../index.html" class="btn btn-outline">Kembali ke Beranda</a>
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
+        <button class="btn-print" onclick="window.print()">🖨️ Cetak Bukti</button>
+        <a href="barang-saya.html" class="btn" style="text-decoration:none;">Lihat Barang Saya</a>
+        <a href="../index.html" class="btn btn-outline" style="text-decoration:none;">Kembali ke Beranda</a>
       </div>
     </div>
   </div>
 
   <div id="footer"></div>
-  <script src="../assets/js/script.js"></script>
+  <script src="../assets/js/script.js?v=3"></script>
 </body>
 </html>

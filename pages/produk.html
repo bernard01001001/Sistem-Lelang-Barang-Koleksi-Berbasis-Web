@@ -7,6 +7,11 @@
   <title>Detail Produk - KOLEKU</title>
   <link rel="stylesheet" href="../assets/css/styles.css">
   <link rel="icon" href="../assets/images/logo.png">
+  <style>
+    #tawar-input::-webkit-outer-spin-button,
+    #tawar-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #tawar-input { -moz-appearance: textfield; }
+  </style>
 </head>
 
 <body>
@@ -100,8 +105,16 @@
           </div>
 
           <div style="margin-top:20px;">
-            <input type="number" id="tawar-input" placeholder="Tawaran Anda (min ${(produk.hargaTertinggi + 50000).toLocaleString('id-ID')})" style="width:100%; padding:12px; font-size:16px; border:2px solid #b8860b; border-radius:6px;">
+            <label style="font-weight:bold;font-size:14px;color:#555;margin-bottom:8px;display:block;">Masukkan Tawaran (min Rp ${(produk.hargaTertinggi + 50000).toLocaleString('id-ID')})</label>
+            <div style="display:flex;align-items:center;gap:0;border:2px solid #b8860b;border-radius:6px;overflow:hidden;background:white;">
+              <button type="button" onclick="kurangiTawaran()" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#f8f1e3,#efe6d5);font-size:22px;font-weight:bold;color:#b8860b;cursor:pointer;" onmouseover="this.style.background='#e8d9c0'" onmouseout="this.style.background='linear-gradient(135deg,#f8f1e3,#efe6d5)'">−</button>
+              <input type="number" id="tawar-input" value="${produk.hargaTertinggi + 50000}" min="${produk.hargaTertinggi + 50000}" style="flex:1;border:none;border-left:1px solid #e5d9c8;border-right:1px solid #e5d9c8;text-align:center;font-size:18px;font-weight:bold;padding:12px;outline:none;" oninput="updateTawarPreview()">
+              <button type="button" onclick="tambahTawaran()" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#b8860b,#d4a017);font-size:22px;font-weight:bold;color:white;cursor:pointer;" onmouseover="this.style.background='#a07509'" onmouseout="this.style.background='linear-gradient(135deg,#b8860b,#d4a017)'">+</button>
+            </div>
+            <div id="tawar-preview" style="margin-top:8px;font-size:14px;color:#b8860b;font-weight:600;">Rp ${(produk.hargaTertinggi + 50000).toLocaleString('id-ID')}</div>
+            <div style="margin-top:4px;font-size:11px;color:#999;">Tombol +/- menambah/kurangi 10% dari harga awal</div>
             <button onclick="kirimTawar()" class="btn" style="margin-top:10px; width:100%; padding:14px; font-size:16px;">Tawar</button>
+            <a href="checkout.html?id=${produk.id}" class="btn" style="display:block; text-align:center; margin-top:10px; width:100%; padding:14px; font-size:16px; box-sizing:border-box;">Beli Sekarang</a>
           </div>
         </div>
       `;
@@ -122,7 +135,7 @@
         if (p.id === produk.id) continue; // skip produk yang sedang dilihat
 
         html +=
-          '<div class="card" style="cursor:pointer;" onclick="window.location.href=\'produk.html?id=${id}' + p.id + '\'">' +
+          '<div class="card" style="cursor:pointer;" onclick="window.location.href=\'produk.html?id=' + p.id + '\'">' +
           '<img src="' + p.gambar + '" alt="' + p.nama + '" style="width:100%; height:160px; object-fit:cover;">' +
           '<div class="body">' +
           '<div class="title">' + p.nama + '</div>' +
@@ -171,13 +184,49 @@
       setInterval(updateCountdown, 1000);
     }
 
-    function kirimTawar() {
-      const nilai = document.getElementById("tawar-input").value;
-      if (nilai) {
-        alert("✅ Tawaran Rp " + parseInt(nilai).toLocaleString('id-ID') + " berhasil dikirim!");
-      } else {
-        alert("Masukkan nilai tawaran Anda");
+    function tambahTawaran() {
+      const produk = getProdukFromUrl();
+      const input = document.getElementById('tawar-input');
+      const current = parseInt(input.value) || 0;
+      const step = Math.round(produk.hargaAwal * 0.10); // 10% of harga awal
+      input.value = current + step;
+      updateTawarPreview();
+    }
+
+    function kurangiTawaran() {
+      const produk = getProdukFromUrl();
+      const input = document.getElementById('tawar-input');
+      const current = parseInt(input.value) || 0;
+      const minBid = produk.hargaTertinggi + 50000;
+      const step = Math.round(produk.hargaAwal * 0.10); // 10% of harga awal
+      let newVal = current - step;
+      if (newVal < minBid) newVal = minBid;
+      input.value = newVal;
+      updateTawarPreview();
+    }
+
+    function updateTawarPreview() {
+      const produk = getProdukFromUrl();
+      const input = document.getElementById('tawar-input');
+      const minBid = produk.hargaTertinggi + 50000;
+      let val = parseInt(input.value) || 0;
+      if (val < minBid) {
+        input.value = minBid;
+        val = minBid;
       }
+      const preview = document.getElementById('tawar-preview');
+      if (preview) preview.textContent = 'Rp ' + val.toLocaleString('id-ID');
+    }
+
+    function kirimTawar() {
+      const produk = getProdukFromUrl();
+      const nilai = parseInt(document.getElementById("tawar-input").value) || 0;
+      const minBid = produk.hargaTertinggi + 50000;
+      if (nilai < minBid) {
+        alert("Tawaran minimum adalah Rp " + minBid.toLocaleString('id-ID'));
+        return;
+      }
+      alert("✅ Tawaran Rp " + nilai.toLocaleString('id-ID') + " berhasil dikirim!");
     }
 
     // Jalankan saat halaman dimuat

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout - KOLEKU</title>
+  <meta name="description" content="Checkout dan pembayaran barang lelang di KOLEKU - Platform Lelang Online">
   <link rel="stylesheet" href="../assets/css/styles.css">
   <link rel="icon" href="../assets/images/logo.png">
 </head>
@@ -12,10 +13,48 @@
 
   <div class="container">
     <h2 class="section-title">Checkout</h2>
-    <div id="checkout-content" class="checkout-grid"></div>
+
+    <!-- Step Wizard Progress Bar -->
+    <div class="step-wizard" id="step-wizard">
+      <div class="step active" id="step-indicator-1">
+        <div class="step-info">
+          <div class="step-circle">1</div>
+          <div class="step-label">Pengiriman</div>
+        </div>
+      </div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step" id="step-indicator-2">
+        <div class="step-info">
+          <div class="step-circle">2</div>
+          <div class="step-label">Pembayaran</div>
+        </div>
+      </div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step" id="step-indicator-3">
+        <div class="step-info">
+          <div class="step-circle">3</div>
+          <div class="step-label">Konfirmasi</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Shipping -->
+    <div class="step-content active" id="step-1">
+      <div id="checkout-step1-content"></div>
+    </div>
+
+    <!-- Step 2: Payment Method -->
+    <div class="step-content" id="step-2">
+      <div id="checkout-step2-content"></div>
+    </div>
+
+    <!-- Step 3: Review & Confirm -->
+    <div class="step-content" id="step-3">
+      <div id="checkout-step3-content"></div>
+    </div>
   </div>
 
   <div id="footer"></div>
-  <script src="../assets/js/script.js"></script>
+  <script src="../assets/js/script.js?v=3"></script>
 </body>
 </html>
