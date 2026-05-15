@@ -1,118 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const { sql, getConnection } = require('../config/db');
+const db = require('../config/db');
 
-// --- LIHAT SEMUA BARANG ---
+// TAMBAH BARANG
+router.post('/', async (req, res) => {
+    const { nama_barang, harga_awal, deskripsi, id_user } = req.body;
+    try {
+        const result = await db.query(
+            "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            [nama_barang, harga_awal, deskripsi, id_user, 'pending']
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// LIHAT SEMUA BARANG (Tampilan Publik)
 router.get('/', async (req, res) => {
     try {
-        const pool = await getConnection();
-        const result = await pool.request()
-            .query("SELECT * FROM tbl_barang WHERE status_barang = 'Open'");
-        res.json(result.recordset);
+        const result = await db.query("SELECT * FROM tbl_barang WHERE status = 'approved'");
+        res.json(result.rows);
     } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-// --- PROSES BIDDING ---
-router.post('/bid', async (req, res) => {
-    try {
-        const { id_barang, id_penawar, nominal_bid } = req.body;
-        const pool = await getConnection();
-
-        // Cek harga terakhir
-        const item = await pool.request()
-            .input('id', sql.Int, id_barang)
-            .query("SELECT harga_sekarang FROM tbl_barang WHERE id_barang = @id");
-
-        if (nominal_bid <= item.recordset[0].harga_sekarang) {
-            return res.status(400).json({ message: "Bid harus lebih tinggi dari harga saat ini!" });
-        }
-
-        // Update harga & simpan riwayat (transaksi sederhana)
-        await pool.request()
-            .input('bid', sql.Decimal(18,2), nominal_bid)
-            .input('id_b', sql.Int, id_barang)
-            .input('id_p', sql.Int, id_penawar)
-            .query(`
-                UPDATE tbl_barang SET harga_sekarang = @bid WHERE id_barang = @id_b;
-                INSERT INTO tbl_lelang (id_barang, id_penawar, harga_penawaran, waktu_penawaran) 
-                VALUES (@id_b, @id_p, @bid, GETDATE());
-            `);
-
-        res.json({ message: "Berhasil menawar!" });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-// --- TAMBAH BARANG BARU (Role: Pelelang) ---
-router.post('/tambah', async (req, res) => {
-    try {
-        const { id_pelelang, nama_barang, deskripsi, harga_awal, tgl_selesai } = req.body;
-        const pool = await getConnection();
-
-        // Validasi: Pastikan harga_awal tidak minus
-        if (harga_awal < 0) {
-            return res.status(400).json({ message: "Harga awal tidak boleh kurang dari 0" });
-        }
-
-        // Query Insert (status_barang default 'Pending' menunggu verifikasi admin)
-        await pool.request()
-            .input('id_p', sql.Int, id_pelelang)
-            .input('nama', sql.VarChar, nama_barang)
-            .input('desc', sql.Text, deskripsi)
-            .input('harga', sql.Decimal(18, 2), harga_awal)
-            .input('selesai', sql.DateTime, tgl_selesai)
-            .query(`INSERT INTO tbl_barang 
-                    (id_pelelang, nama_barang, deskripsi, harga_awal, harga_sekarang, tgl_mulai, tgl_selesai, status_barang) 
-                    VALUES (@id_p, @nama, @desc, @harga, @harga, GETDATE(), @selesai, 'Pending')`);
-
-        res.status(201).json({ message: "Barang berhasil diajukan! Menunggu verifikasi admin." });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Gagal menambah barang: " + err.message);
-    }
-});
-
-// --- LIHAT BARANG SAYA (Pelelang) ---
-router.get('/saya/:id_pelelang', async (req, res) => {
-    try {
-        const { id_pelelang } = req.params;
-        const pool = await getConnection();
-        const result = await pool.request()
-            .input('id_p', sql.Int, id_pelelang)
-            .query("SELECT * FROM tbl_barang WHERE id_pelelang = @id_p");
-        
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-// --- BARANG YANG DIMENANGKAN (Role: Penawar) ---
-router.get('/menang/:id_penawar', async (req, res) => {
-    try {
-        const { id_penawar } = req.params;
-        const pool = await getConnection();
-        
-        // cari di tbl_lelang harga tertinggi yang dimiliki user ini untuk barang yang sudah 'Sold'
-        const result = await pool.request()
-            .input('id_p', sql.Int, id_penawar)
-            .query(`
-                SELECT b.id_barang, b.nama_barang, b.harga_sekarang as harga_final, b.tgl_selesai
-                FROM tbl_barang b
-                WHERE b.status_barang = 'Sold' 
-                AND b.harga_sekarang = (
-                    SELECT MAX(harga_penawaran) 
-                    FROM tbl_lelang l 
-                    WHERE l.id_barang = b.id_barang AND l.id_penawar = @id_p
-                )
-            `);
-            
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).send(err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
