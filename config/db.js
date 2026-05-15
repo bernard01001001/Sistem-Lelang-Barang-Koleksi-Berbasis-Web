@@ -1,32 +1,15 @@
-const sql = require('mssql');
 require('dotenv').config();
+const { Pool } = require('pg');
 
-const config = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,
-    database: process.env.DB_NAME,
-    options: {
-        encrypt: true, 
-        trustServerCertificate: true 
-    }
-};
+// Menggunakan connection string dari .env
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Wajib untuk koneksi aman ke Neon
+  }
+});
 
-let pool;
+// Fungsi untuk eksekusi query agar mirip cara pakainya dengan sebelumnya
+const query = (text, params) => pool.query(text, params);
 
-async function getConnection() {
-    try {
-        if (!pool) {
-            pool = await sql.connect(config);
-        }
-        return pool;
-    } catch (error) {
-        console.error("Database connection failed: ", error);
-        throw error;
-    }
-}
-
-module.exports = {
-    sql,
-    getConnection
-};
+module.exports = { query, pool };
