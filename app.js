@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
+const path = require('path');
 const app = express();
 
 app.use(express.json());
@@ -10,10 +12,15 @@ const barangRoutes = require('./routes/barangRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const lelangRoutes = require('./routes/lelangRoutes');
 
+
+// Serve static files (HTML, CSS, JS, images)
+app.use(express.static(path.join(__dirname)));
+
 // Gunakan Routes
 app.use('/auth', authRoutes);
 app.use('/barang', barangRoutes);
 app.use('/admin', adminRoutes);
+
 app.use('/lelang', lelangRoutes);
 
 const PORT = process.env.PORT || 3000;
