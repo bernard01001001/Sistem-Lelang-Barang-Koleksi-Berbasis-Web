@@ -26,17 +26,24 @@ function renderNavbar() {
   var menuKanan = "";
 
   if (user) {
+    let extraMenu = '';
+    if (user.role === 'admin') {
+      extraMenu += `<a href="${pp}admin.html">Dashboard Admin</a>`;
+      extraMenu += `<a href="${pp}jual.html" class="btn">Jual Barang</a>`;
+    } else if (user.role === 'pelelang') {
+      extraMenu += `<a href="${pp}jual.html" class="btn">Jual Barang</a>`;
+    }
+
     menuKanan = `
-      <span style="font-weight:bold;color:#3f2e1e">Halo, ${user.nama}</span>
+      <span style="font-weight:bold;color:#3f2e1e">Halo, ${user.nama} (${user.role})</span>
       <a href="${pp}barang-saya.html">Barang Saya</a>
+      ${extraMenu}
       <a href="#" onclick="logout()">Keluar</a>
-      <a href="${pp}jual.html" class="btn">Jual Barang</a>
     `;
   } else {
     menuKanan = `
       <a href="${pp}login.html">Masuk</a>
       <a href="${pp}daftar.html">Daftar</a>
-      <a href="${pp}jual.html" class="btn">Jual Barang</a>
     `;
   }
 
@@ -153,13 +160,22 @@ async function renderDetailProduk() {
       '<div class="label">Harga Tertinggi Saat Ini</div>' +
       '<div class="value">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
       '</div>' +
-      '<div class="timer">Batas Waktu: ' + sisaWaktuStr + '</div>' +
-      '<form class="bid-form" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
-      '<input type="number" id="bid-input" placeholder="Tawaran Anda (min ' + minBid + ')" required>' +
-      '<button class="btn" type="submit">Tawar</button>' +
-      '</form>' +
-      '<a href="checkout.html?id=' + produk.id_barang + '" class="btn btn-block">Beli Sekarang</a>' +
-      '</div>';
+      '<div class="timer">Batas Waktu: ' + sisaWaktuStr + '</div>';
+
+    var user = getUser();
+    if (!user || user.role !== 'pelelang') {
+        html += '<form class="bid-form" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
+                '<input type="number" id="bid-input" placeholder="Tawaran Anda (min ' + minBid + ')" required>' +
+                '<button class="btn" type="submit">Tawar</button>' +
+                '</form>' +
+                '<a href="checkout.html?id=' + produk.id_barang + '" class="btn btn-block">Beli Sekarang</a>';
+    } else {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
+                '<strong>Anda masuk sebagai Pelelang.</strong><br>Pelelang tidak dapat menawar atau membeli barang.' +
+                '</div>';
+    }
+
+    html += '</div>';
 
     detail.innerHTML = html;
   } catch(e) {
@@ -173,6 +189,10 @@ async function kirimBid(e, id_barang) {
   if (!user) {
     alert("Silakan login dulu untuk menawar.");
     window.location.href = "login.html";
+    return;
+  }
+  if (user.role === 'pelelang') {
+    alert("Pelelang tidak dapat menawar barang.");
     return;
   }
   var nilai = parseInt(document.getElementById("bid-input").value);
@@ -322,6 +342,10 @@ async function renderStep3Review() {
 async function bayar() {
   var user = getUser();
   if (!user) return;
+  if (user.role === 'pelelang') {
+    alert("Pelelang tidak dapat membeli barang.");
+    return;
+  }
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
 

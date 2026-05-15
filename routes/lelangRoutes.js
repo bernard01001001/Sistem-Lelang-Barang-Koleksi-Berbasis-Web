@@ -6,7 +6,16 @@ router.post('/bid', async (req, res) => {
     const { id_barang, id_user, harga_penawaran } = req.body;
 
     try {
-        // 1. Ambil data barang (Cukup satu kali query untuk semua info)
+        // 1. Cek peran user
+        const userCheck = await db.query("SELECT role FROM tbl_user WHERE id_user = $1", [id_user]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ message: "User tidak ditemukan." });
+        }
+        if (userCheck.rows[0].role === 'pelelang') {
+            return res.status(403).json({ message: "Pelelang tidak diizinkan untuk menawar barang." });
+        }
+
+        // 2. Ambil data barang (Cukup satu kali query untuk semua info)
         const barangResult = await db.query(
             "SELECT status_lelang, harga_awal, tanggal_selesai FROM tbl_barang WHERE id_barang = $1", 
             [id_barang]

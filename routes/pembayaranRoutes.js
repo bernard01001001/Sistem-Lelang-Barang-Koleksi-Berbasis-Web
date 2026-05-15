@@ -7,6 +7,15 @@ router.post('/create', async (req, res) => {
     try {
         const { id_user, id_barang, total, metode, status, virtual_account, batas_waktu } = req.body;
         
+        // 1. Cek peran user
+        const userCheck = await query("SELECT role FROM tbl_user WHERE id_user = $1", [id_user]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ message: "User tidak ditemukan." });
+        }
+        if (userCheck.rows[0].role === 'pelelang') {
+            return res.status(403).json({ message: "Pelelang tidak diizinkan untuk membeli barang." });
+        }
+
         const q = `INSERT INTO tbl_pembayaran 
                    (id_user, id_barang, total, metode, status, virtual_account, batas_waktu, created_at) 
                    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
