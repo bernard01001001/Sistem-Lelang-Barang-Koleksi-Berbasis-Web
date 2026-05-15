@@ -1,61 +1,56 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs'); // Tambahkan ini
-const { sql, getConnection } = require('../config/db');
+const db = require('../config/db');
+const bcrypt = require('bcrypt');
 
-// --- SIGNUP DENGAN HASHING ---
+// SIGNUP
 router.post('/signup', async (req, res) => {
+    const { nama, email, password, role } = req.body; 
+    
     try {
-        const { nama_lengkap, email, password, no_hp, alamat, role } = req.body;
-        const pool = await getConnection(); 
-
-        // 1. Hash password (10 adalah salt rounds)
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        const inputRole = role ? role.toLowerCase() : 'penawar';
+        const validRoles = ['admin', 'pelelang', 'penawar'];
+        const userRole = validRoles.includes(inputRole) ? inputRole : 'penawar';
 
-        await pool.request()
-            .input('nama', sql.VarChar, nama_lengkap)
-            .input('email', sql.VarChar, email)
-            .input('password', sql.VarChar, hashedPassword) // Simpan yang sudah di-hash
-            .input('no_hp', sql.VarChar, no_hp)
-            .input('alamat', sql.Text, alamat)
-            .input('role', sql.VarChar, role)
-            .query(`INSERT INTO tbl_user (nama_lengkap, email, password, no_hp, alamat, role, status_akun) 
-                    VALUES (@nama, @email, @password, @no_hp, @alamat, @role, 'Aktif')`);
-
-        res.status(201).json({ message: "Registrasi Berhasil!" });
+        const result = await db.query(
+            "INSERT INTO tbl_user (nama, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id_user, nama, email, role",
+            [nama, email, hashedPassword, userRole]
+        );
+        
+        res.status(201).json({ 
+            message: `Registrasi sebagai ${userRole} berhasil`, 
+            user: result.rows[0] 
+        });
     } catch (err) {
-        res.status(500).send(err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
-// --- LOGIN DENGAN PENGECEKAN HASH ---
+// LOGIN
 router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
     try {
-        const { email, password } = req.body;
-        const pool = await getConnection(); 
+        const result = await db.query("SELECT * FROM tbl_user WHERE email = $1", [email]);
         
-        const result = await pool.request()
-            .input('email', sql.VarChar, email)
-            .query("SELECT * FROM tbl_user WHERE email = @email AND status_akun = 'Aktif'");
+        if (result.rows.length === 0) return res.status(404).json({ message: "User tidak ditemukan" });
 
-        if (result.recordset.length > 0) {
-            const user = result.recordset[0];
-            
-            // 2. Bandingkan password input dengan hash di DB
-            const isMatch = await bcrypt.compare(password, user.password);
-            
-            if (isMatch) {
-                // Hapus password dari object sebelum dikirim ke client agar aman
-                delete user.password;
-                res.json({ message: "Login Berhasil", user });
-            } else {
-                res.status(401).json({ message: "Password salah!" });
-            }
-        } else {
-            res.status(401).json({ message: "Email tidak ditemukan!" });
-        }
+        const user = result.rows[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) return res.status(401).json({ message: "Password salah" });
+
+        res.json({ 
+            message: "Login berhasil", 
+            user: { 
+                id: user.id_user, 
+                nama: user.nama,
+                role: user.role 
+            } 
+        });
     } catch (err) {
-        res.status(500).send(err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
