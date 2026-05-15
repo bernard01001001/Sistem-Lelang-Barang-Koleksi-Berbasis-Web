@@ -103,15 +103,33 @@ async function renderGridProduk() {
     const produkList = await res.json();
     
     var pp = getPagePrefix();
-    var html = "";
-    if(produkList.length === 0) {
+    let displayList = produkList;
+    const isLelangAktifPage = window.location.pathname.includes('lelang-aktif.html');
+    const now = new Date();
+
+    if (isLelangAktifPage) {
+       displayList = produkList.filter(p => new Date(p.tanggal_mulai) <= now);
+    }
+
+    if(displayList.length === 0) {
        grid.innerHTML = "<p>Tidak ada barang lelang saat ini.</p>";
        return;
     }
 
-    for (var i = 0; i < produkList.length; i++) {
-      var p = produkList[i];
-      var sisaWaktu = new Date(p.tanggal_selesai) > new Date() ? "Berjalan" : "Berakhir";
+    for (var i = 0; i < displayList.length; i++) {
+      var p = displayList[i];
+      var startDate = new Date(p.tanggal_mulai);
+      var endDate = new Date(p.tanggal_selesai);
+      
+      var metaStatus = "";
+      if (startDate > now) {
+         metaStatus = "Akan Datang: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'});
+      } else if (endDate > now) {
+         metaStatus = "Berjalan (Sisa: " + endDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
+      } else {
+         metaStatus = "Berakhir";
+      }
+
       html +=
         '<a href="' + pp + 'produk.html?id=' + p.id_barang + '">' +
         '<div class="card">' +
@@ -119,7 +137,7 @@ async function renderGridProduk() {
         '<div class="body">' +
         '<div class="title">' + p.nama_barang + '</div>' +
         '<div class="price">' + formatRupiah(p.harga_tertinggi || p.harga_awal) + '</div>' +
-        '<div class="meta">Status: ' + sisaWaktu + '</div>' +
+        '<div class="meta">Status: ' + metaStatus + '</div>' +
         '</div></div></a>';
     }
     grid.innerHTML = html;
@@ -143,8 +161,18 @@ async function renderDetailProduk() {
        return;
     }
     const produk = await res.json();
-    
     var minBid = Number(produk.harga_tertinggi || produk.harga_awal) + 10000;
+    
+    var now = new Date();
+    var startDate = new Date(produk.tanggal_mulai);
+    var isUpcoming = startDate > now;
+    var sisaWaktuStr = "Waktu Habis";
+    
+    if (isUpcoming) {
+        sisaWaktuStr = "Dimulai pada: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'});
+    } else if (new Date(produk.tanggal_selesai) > now) {
+        sisaWaktuStr = new Date(produk.tanggal_selesai).toLocaleString();
+    }
 
     var html =
       '<div class="img-box"><img src="' + produk.gambar + '" alt="' + produk.nama_barang + '" style="width:100%; border-radius:8px;"></div>' +
@@ -162,7 +190,11 @@ async function renderDetailProduk() {
       '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">Sisa Waktu: <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
 
     var user = getUser();
-    if (!user || user.role !== 'pelelang') {
+    if (isUpcoming) {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
+                '<strong>Lelang Belum Dimulai</strong><br>Barang ini dijadwalkan untuk lelang pada tanggal ' + startDate.toLocaleDateString('id-ID') + '.' +
+                '</div>';
+    } else if (!user || user.role !== 'pelelang') {
         html += '<label style="font-weight:bold;font-size:14px;color:#555;margin-bottom:8px;display:block;">Masukkan Tawaran (min Rp ' + minBid.toLocaleString('id-ID') + ')</label>' +
                 '<form class="bid-form" style="display:block; margin-bottom:15px;" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
                 '<div style="display:flex;align-items:center;gap:0;border:2px solid #b8860b;border-radius:6px;overflow:hidden;background:white;margin-bottom:8px;">' +
@@ -184,18 +216,23 @@ async function renderDetailProduk() {
     html += '</div>';
 
     detail.innerHTML = html;
-    startDynamicCountdown(produk.tanggal_selesai);
+    startDynamicCountdown(produk.tanggal_selesai, isUpcoming);
   } catch(e) {
     detail.innerHTML = "<p>Gagal memuat detail.</p>";
   }
 }
 
-function startDynamicCountdown(endTimeStr) {
+function startDynamicCountdown(endTimeStr, isUpcoming) {
   const endTime = new Date(endTimeStr).getTime();
   
 function updateCountdown() {
     const countdownEl = document.getElementById("countdown-detail");
     if (!countdownEl) return; // Stop if element is not on page
+
+    if (isUpcoming) {
+       countdownEl.textContent = "Belum Dimulai";
+       return;
+    }
 
     const timeLeft = endTime - Date.now();
 
