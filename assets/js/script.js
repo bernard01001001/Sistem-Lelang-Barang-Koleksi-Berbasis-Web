@@ -92,7 +92,7 @@ async function renderGridProduk() {
   if (!grid) return;
 
   try {
-    const res = await fetch('/barang');
+    const res = await fetch('http://localhost:3000/barang');
     const produkList = await res.json();
     
     var pp = getPagePrefix();
@@ -130,7 +130,7 @@ async function renderDetailProduk() {
   if(!id) return;
 
   try {
-    const res = await fetch('/barang/' + id);
+    const res = await fetch('http://localhost:3000/barang/' + id);
     if(!res.ok) {
        detail.innerHTML = "<p>Produk tidak ditemukan.</p>";
        return;
@@ -182,7 +182,7 @@ async function kirimBid(e, id_barang) {
   }
   
   try {
-     const res = await fetch('/lelang/bid', {
+     const res = await fetch('http://localhost:3000/lelang/bid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_barang: id_barang, id_user: user.id, harga_penawaran: nilai })
@@ -211,7 +211,7 @@ async function renderCheckout() {
   if(!id) return;
   
   try {
-    const res = await fetch('/barang/' + id);
+    const res = await fetch('http://localhost:3000/barang/' + id);
     if(!res.ok) return;
     const produk = await res.json();
 
@@ -302,7 +302,7 @@ async function renderStep3Review() {
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
-  const res = await fetch('/barang/' + id);
+  const res = await fetch('http://localhost:3000/barang/' + id);
   const produk = await res.json();
   var ongkir = 25000;
   var total = Number(produk.harga_tertinggi || produk.harga_awal) + ongkir;
@@ -325,7 +325,7 @@ async function bayar() {
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
 
-  const resBarang = await fetch('/barang/' + id);
+  const resBarang = await fetch('http://localhost:3000/barang/' + id);
   const produk = await resBarang.json();
   var total = Number(produk.harga_tertinggi || produk.harga_awal) + 25000;
 
@@ -337,7 +337,7 @@ async function bayar() {
   if (selectedPaymentMethod === 'bank') vaNumber = '8800' + Math.floor(10000000 + Math.random() * 90000000);
 
   try {
-     const res = await fetch('/pembayaran/create', {
+     const res = await fetch('http://localhost:3000/pembayaran/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -372,7 +372,7 @@ async function renderProsesPembayaran() {
   if(!trx) return;
 
   try {
-     const res = await fetch('/pembayaran/' + trx);
+     const res = await fetch('http://localhost:3000/pembayaran/' + trx);
      if(!res.ok) { box.innerHTML = "<p>Transaksi tidak ditemukan</p>"; return; }
      const data = await res.json();
 
@@ -392,7 +392,7 @@ async function renderProsesPembayaran() {
 
 async function konfirmasiPembayaran(trx) {
   try {
-     await fetch('/pembayaran/confirm/' + trx, { method: 'PUT' });
+     await fetch('http://localhost:3000/pembayaran/confirm/' + trx, { method: 'PUT' });
      window.location.href = "pembayaran.html?trx=" + trx;
   } catch(e) {}
 }
@@ -406,7 +406,7 @@ async function renderPembayaran() {
   if(!trx) return;
 
   try {
-     const res = await fetch('/pembayaran/' + trx);
+     const res = await fetch('http://localhost:3000/pembayaran/' + trx);
      const data = await res.json();
      box.innerHTML =
        '<div class="receipt-card">' +
@@ -428,7 +428,7 @@ async function renderBarangSaya() {
   }
 
   try {
-     const res = await fetch('/pembayaran/user/' + user.id);
+     const res = await fetch('http://localhost:3000/pembayaran/user/' + user.id);
      const pembelian = await res.json();
      
      if (pembelian.length === 0) {
@@ -458,7 +458,7 @@ async function handleLogin(e) {
   var errorEl = document.getElementById("error");
 
   try {
-     const res = await fetch('/auth/login', {
+     const res = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -482,7 +482,7 @@ async function handleDaftar(e) {
   var errorEl = document.getElementById("error");
 
   try {
-     const res = await fetch('/auth/signup', {
+     const res = await fetch('http://localhost:3000/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nama: namaDepan + ' ' + namaBelakang, email, password, role: 'penawar' })
