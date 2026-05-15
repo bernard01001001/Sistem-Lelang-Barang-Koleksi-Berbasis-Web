@@ -11,7 +11,8 @@ router.post('/signup', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const inputRole = role ? role.toLowerCase() : 'penawar';
-        const validRoles = ['admin', 'pelelang', 'penawar'];
+        // 'admin' is explicitly removed from valid registration roles
+        const validRoles = ['pelelang', 'penawar'];
         const userRole = validRoles.includes(inputRole) ? inputRole : 'penawar';
 
         const result = await db.query(

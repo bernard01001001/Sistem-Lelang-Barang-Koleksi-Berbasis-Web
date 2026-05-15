@@ -503,13 +503,14 @@ async function handleDaftar(e) {
   var namaDepan = document.getElementById("namaDepan").value.trim();
   var namaBelakang = document.getElementById("namaBelakang").value.trim();
   var password = document.getElementById("password").value;
+  var role = document.getElementById("role") ? document.getElementById("role").value : 'penawar';
   var errorEl = document.getElementById("error");
 
   try {
      const res = await fetch('/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nama: namaDepan + ' ' + namaBelakang, email, password, role: 'penawar' })
+        body: JSON.stringify({ nama: namaDepan + ' ' + namaBelakang, email, password, role: role })
      });
      const data = await res.json();
      if(!res.ok) throw new Error(data.error || data.message);
