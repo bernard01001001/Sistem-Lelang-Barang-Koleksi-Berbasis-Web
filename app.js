@@ -1,18 +1,22 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
-const { sql, getConnection } = require('./config/db');
+
+app.use(express.json());
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
 const barangRoutes = require('./routes/barangRoutes');
-const adminRoutes = require('./routes/adminRoutes')
-
-app.use(express.json());
+const adminRoutes = require('./routes/adminRoutes');
+const lelangRoutes = require('./routes/lelangRoutes');
 
 // Gunakan Routes
 app.use('/auth', authRoutes);
 app.use('/barang', barangRoutes);
 app.use('/admin', adminRoutes);
+app.use('/lelang', lelangRoutes);
 
-const PORT = 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server jalan di http://localhost:${PORT}`);
+});
