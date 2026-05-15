@@ -26,6 +26,11 @@ app.use('/lelang', lelangRoutes);
 app.use('/pembayaran', pembayaranRoutes);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server jalan di http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server jalan di http://localhost:${PORT}`);
+    });
+}
+
+// WAJIB UNTUK VERCEL: Export module app
+module.exports = app;
