@@ -3,14 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// 1. Beri tahu Express untuk melayani file statis (CSS, JS, Gambar) di folder root
-app.use(express.static(path.join(__dirname, '.')));
+const path = require('path');
 
-// 2. Beri tahu Express apa yang harus dikirim saat user buka halaman utama "/"
+// Gunakan ini jika index.html ada di folder 'pages'
+app.use(express.static(path.join(__dirname, 'pages')));
+
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'pages', 'index.html'));
 });
-
 // Baris module.exports harus tetap di paling bawah
 module.exports = app;
 const app = express();
