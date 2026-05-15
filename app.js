@@ -11,6 +11,7 @@ const authRoutes = require('./routes/authRoutes');
 const barangRoutes = require('./routes/barangRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const lelangRoutes = require('./routes/lelangRoutes');
+const pembayaranRoutes = require('./routes/pembayaranRoutes');
 
 
 // Serve static files (HTML, CSS, JS, images)
@@ -22,6 +23,7 @@ app.use('/barang', barangRoutes);
 app.use('/admin', adminRoutes);
 
 app.use('/lelang', lelangRoutes);
+app.use('/pembayaran', pembayaranRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
