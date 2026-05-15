@@ -163,11 +163,18 @@ async function renderDetailProduk() {
 
     var user = getUser();
     if (!user || user.role !== 'pelelang') {
-        html += '<form class="bid-form" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
-                '<input type="number" id="bid-input" placeholder="Tawaran Anda (min ' + minBid + ')" required>' +
-                '<button class="btn" type="submit">Tawar</button>' +
+        html += '<label style="font-weight:bold;font-size:14px;color:#555;margin-bottom:8px;display:block;">Masukkan Tawaran (min Rp ' + minBid.toLocaleString('id-ID') + ')</label>' +
+                '<form class="bid-form" style="display:block; margin-bottom:15px;" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
+                '<div style="display:flex;align-items:center;gap:0;border:2px solid #b8860b;border-radius:6px;overflow:hidden;background:white;margin-bottom:8px;">' +
+                '<button type="button" onclick="kurangiTawaran(' + minBid + ', ' + produk.harga_awal + ')" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#f8f1e3,#efe6d5);font-size:22px;font-weight:bold;color:#b8860b;cursor:pointer;" onmouseover="this.style.background=\'#e8d9c0\'" onmouseout="this.style.background=\'linear-gradient(135deg,#f8f1e3,#efe6d5)\'">−</button>' +
+                '<input type="number" id="bid-input" value="' + minBid + '" min="' + minBid + '" required style="flex:1;border:none;border-left:1px solid #e5d9c8;border-right:1px solid #e5d9c8;text-align:center;font-size:18px;font-weight:bold;padding:12px;outline:none;" oninput="updateTawarPreview(' + minBid + ')">' +
+                '<button type="button" onclick="tambahTawaran(' + produk.harga_awal + ')" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#b8860b,#d4a017);font-size:22px;font-weight:bold;color:white;cursor:pointer;" onmouseover="this.style.background=\'#a07509\'" onmouseout="this.style.background=\'linear-gradient(135deg,#b8860b,#d4a017)\'">+</button>' +
+                '</div>' +
+                '<div id="tawar-preview" style="margin-top:8px;font-size:14px;color:#b8860b;font-weight:600;">Rp ' + minBid.toLocaleString('id-ID') + '</div>' +
+                '<div style="margin-top:4px;margin-bottom:12px;font-size:11px;color:#999;">Tombol +/- menambah/kurangi 10% dari harga awal</div>' +
+                '<button class="btn" type="submit" style="width:100%; padding:14px; font-size:16px;">Kirim Tawaran</button>' +
                 '</form>' +
-                '<a href="checkout.html?id=' + produk.id_barang + '" class="btn btn-block">Beli Sekarang</a>';
+                '<a href="checkout.html?id=' + produk.id_barang + '" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:white; color:#b8860b; border:2px solid #b8860b;">Beli Sekarang</a>';
     } else {
         html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
                 '<strong>Anda masuk sebagai Pelelang.</strong><br>Pelelang tidak dapat menawar atau membeli barang.' +
@@ -186,7 +193,7 @@ async function renderDetailProduk() {
 function startDynamicCountdown(endTimeStr) {
   const endTime = new Date(endTimeStr).getTime();
   
-  function updateCountdown() {
+function updateCountdown() {
     const countdownEl = document.getElementById("countdown-detail");
     if (!countdownEl) return; // Stop if element is not on page
 
@@ -207,6 +214,40 @@ function startDynamicCountdown(endTimeStr) {
 
   updateCountdown();
   setInterval(updateCountdown, 1000);
+}
+
+function tambahTawaran(hargaAwal) {
+  var input = document.getElementById('bid-input');
+  var current = parseInt(input.value) || 0;
+  var step = Math.round(hargaAwal * 0.10);
+  if (step < 10000) step = 10000;
+  input.value = current + step;
+  updateTawarPreview(input.getAttribute('min'));
+}
+
+function kurangiTawaran(minBid, hargaAwal) {
+  var input = document.getElementById('bid-input');
+  var current = parseInt(input.value) || 0;
+  var step = Math.round(hargaAwal * 0.10);
+  if (step < 10000) step = 10000;
+  var newVal = current - step;
+  if (newVal < minBid) newVal = minBid;
+  input.value = newVal;
+  updateTawarPreview(minBid);
+}
+
+function updateTawarPreview(minBid) {
+  var input = document.getElementById('bid-input');
+  var val = parseInt(input.value) || 0;
+  minBid = parseInt(minBid) || 0;
+  if (val < minBid) {
+    input.value = minBid;
+    val = minBid;
+  }
+  var preview = document.getElementById('tawar-preview');
+  if (preview) {
+    preview.textContent = 'Rp ' + val.toLocaleString('id-ID');
+  }
 }
 
 async function kirimBid(e, id_barang) {
