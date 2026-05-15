@@ -142,7 +142,8 @@ async function renderGridProduk() {
     }
     grid.innerHTML = html;
   } catch(e) {
-    grid.innerHTML = "<p>Gagal memuat barang.</p>";
+    console.error(e);
+    grid.innerHTML = "<p>Gagal memuat barang. Error: " + e.message + "</p>";
   }
 }
 
