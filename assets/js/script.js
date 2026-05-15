@@ -144,7 +144,6 @@ async function renderDetailProduk() {
     }
     const produk = await res.json();
     
-    var sisaWaktuStr = new Date(produk.tanggal_selesai) > new Date() ? new Date(produk.tanggal_selesai).toLocaleString() : "Waktu Habis";
     var minBid = Number(produk.harga_tertinggi || produk.harga_awal) + 10000;
 
     var html =
@@ -160,7 +159,7 @@ async function renderDetailProduk() {
       '<div class="label">Harga Tertinggi Saat Ini</div>' +
       '<div class="value">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
       '</div>' +
-      '<div class="timer">Batas Waktu: ' + sisaWaktuStr + '</div>';
+      '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">Sisa Waktu: <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
 
     var user = getUser();
     if (!user || user.role !== 'pelelang') {
@@ -178,9 +177,36 @@ async function renderDetailProduk() {
     html += '</div>';
 
     detail.innerHTML = html;
+    startDynamicCountdown(produk.tanggal_selesai);
   } catch(e) {
     detail.innerHTML = "<p>Gagal memuat detail.</p>";
   }
+}
+
+function startDynamicCountdown(endTimeStr) {
+  const endTime = new Date(endTimeStr).getTime();
+  
+  function updateCountdown() {
+    const countdownEl = document.getElementById("countdown-detail");
+    if (!countdownEl) return; // Stop if element is not on page
+
+    const timeLeft = endTime - Date.now();
+
+    if (timeLeft <= 0) {
+      countdownEl.textContent = "Lelang telah berakhir";
+      return;
+    }
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    countdownEl.textContent = `${days} hari ${hours} jam ${minutes} menit ${seconds} detik`;
+  }
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 }
 
 async function kirimBid(e, id_barang) {
