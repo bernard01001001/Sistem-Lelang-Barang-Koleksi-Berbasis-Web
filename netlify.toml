@@ -1,0 +1,53 @@
+[build]
+  functions = "netlify/functions"
+  publish = "."
+
+[[redirects]]
+  from = "/auth"
+  to = "/.netlify/functions/api/auth"
+  status = 200
+
+[[redirects]]
+  from = "/auth/*"
+  to = "/.netlify/functions/api/auth/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/barang"
+  to = "/.netlify/functions/api/barang"
+  status = 200
+
+[[redirects]]
+  from = "/barang/*"
+  to = "/.netlify/functions/api/barang/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/.netlify/functions/api/admin"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/.netlify/functions/api/admin/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/lelang"
+  to = "/.netlify/functions/api/lelang"
+  status = 200
+
+[[redirects]]
+  from = "/lelang/*"
+  to = "/.netlify/functions/api/lelang/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/pembayaran"
+  to = "/.netlify/functions/api/pembayaran"
+  status = 200
+
+[[redirects]]
+  from = "/pembayaran/*"
+  to = "/.netlify/functions/api/pembayaran/:splat"
+  status = 200
