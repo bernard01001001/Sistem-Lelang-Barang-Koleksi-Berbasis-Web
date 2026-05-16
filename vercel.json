@@ -28,27 +28,23 @@
       "dest": "/pages/$1"
     },
     {
-      "src": "/auth/(.*)",
+      "src": "/auth(.*)",
       "dest": "/api/index.js"
     },
     {
-      "src": "/barang/(.*)",
+      "src": "/barang(.*)",
       "dest": "/api/index.js"
     },
     {
-      "src": "/admin/(.*)",
+      "src": "/admin(.*)",
       "dest": "/api/index.js"
     },
     {
-      "src": "/lelang/(.*)",
+      "src": "/lelang(.*)",
       "dest": "/api/index.js"
     },
     {
-      "src": "/pembayaran/(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/api/(.*)",
+      "src": "/pembayaran(.*)",
       "dest": "/api/index.js"
     },
     {
