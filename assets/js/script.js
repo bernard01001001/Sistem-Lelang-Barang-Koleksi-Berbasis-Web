@@ -134,7 +134,7 @@ function formatRupiah(angka) {
 }
 
 async function renderGridProduk() {
-  var grid = document.getElementById("grid-produk");
+  var grid = document.getElementById("grid-produk") || document.getElementById("produk-grid");
   if (!grid) return;
 
   try {
@@ -178,6 +178,7 @@ async function renderGridProduk() {
         '<div class="body">' +
         '<div class="title">' + p.nama_barang + '</div>' +
         '<div class="price">' + formatRupiah(p.harga_tertinggi || p.harga_awal) + '</div>' +
+        (p.harga_beli_langsung ? '<div style="font-size:11px; color:#b8860b; font-weight:bold;">Beli Langsung: ' + formatRupiah(p.harga_beli_langsung) + '</div>' : '') +
         '<div class="meta">Status: ' + metaStatus + '</div>' +
         '</div></div></a>';
     }
@@ -228,8 +229,16 @@ async function renderDetailProduk() {
       '<div class="harga-box">' +
       '<div class="label">Harga Tertinggi Saat Ini</div>' +
       '<div class="value" id="harga-tertinggi-display">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
-      '</div>' +
-      '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">' + (isUpcoming ? 'Lelang Dimulai Dalam:' : 'Sisa Waktu:') + ' <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
+      '</div>';
+
+    if (produk.harga_beli_langsung) {
+      html += '<div class="harga-box" style="border: 2px solid #b8860b; background: #fffaf0;">' +
+              '<div class="label" style="color:#b8860b; font-weight:bold;">Harga Beli Langsung</div>' +
+              '<div class="value" style="color:#b8860b;">' + formatRupiah(produk.harga_beli_langsung) + '</div>' +
+              '</div>';
+    }
+
+    html += '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">' + (isUpcoming ? 'Lelang Dimulai Dalam:' : 'Sisa Waktu:') + ' <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
 
     var user = getUser();
     if (isUpcoming) {
@@ -248,8 +257,13 @@ async function renderDetailProduk() {
                 '<div style="margin-top:4px;margin-bottom:12px;font-size:11px;color:#999;">Tombol +/- menambah/kurangi 10% dari harga awal</div>' +
                 '<button class="btn" type="submit" style="width:100%; padding:14px; font-size:16px;">Kirim Tawaran</button>' +
                 '</form>' +
-                '<div id="bid-message" style="margin-bottom:15px; font-weight:bold; text-align:center;"></div>' +
-                '<a href="checkout.html?id=' + produk.id_barang + '" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:white; color:#b8860b; border:2px solid #b8860b;">Beli Sekarang</a>';
+                '<div id="bid-message" style="margin-bottom:15px; font-weight:bold; text-align:center;"></div>';
+        
+        if (produk.harga_beli_langsung) {
+            html += '<a href="checkout.html?id=' + produk.id_barang + '&type=buynow" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:#b8860b; color:white; margin-bottom:10px;">Beli Sekarang (' + formatRupiah(produk.harga_beli_langsung) + ')</a>';
+        }
+        
+        html += '<a href="checkout.html?id=' + produk.id_barang + '" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:white; color:#b8860b; border:2px solid #b8860b;">Lanjutkan ke Checkout</a>';
     } else {
         html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
                 '<strong>Anda masuk sebagai Pelelang.</strong><br>Pelelang tidak dapat menawar atau membeli barang.' +
@@ -387,6 +401,7 @@ async function kirimBid(e, id_barang) {
          msgEl.textContent = "Tawaran berhasil dikirim!";
          setTimeout(() => msgEl.textContent = "", 3000);
       }
+      showToast("Tawaran berhasil dikirim!", "success");
       
       // Update displayed max bid
       const displayEl = document.getElementById('harga-tertinggi-display');
@@ -559,17 +574,25 @@ async function renderStep3Review() {
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
+  var isBuyNow = params.get("type") === "buynow";
+  
   const res = await fetch('/barang/' + id);
   const produk = await res.json();
   var ongkir = 25000;
-  var total = Number(produk.harga_tertinggi || produk.harga_awal) + ongkir;
+  
+  var basePrice = Number(produk.harga_tertinggi || produk.harga_awal);
+  if (isBuyNow && produk.harga_beli_langsung) {
+      basePrice = Number(produk.harga_beli_langsung);
+  }
+  
+  var total = basePrice + ongkir;
 
   var metodeLabel = selectedPaymentMethod;
   if(selectedPaymentMethod === 'bank') metodeLabel += ' - ' + selectedBank;
   if(selectedPaymentMethod === 'ewallet') metodeLabel += ' - ' + selectedEwallet;
 
   box.innerHTML =
-    '<div class="review-section"><h4>📦 Produk</h4><div>' + produk.nama_barang + ' - ' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div></div>' +
+    '<div class="review-section"><h4>📦 Produk</h4><div>' + produk.nama_barang + ' - ' + formatRupiah(basePrice) + '</div></div>' +
     '<div class="review-section"><h4>💳 Pembayaran</h4><div>' + metodeLabel + '</div></div>' +
     '<div class="review-section"><h4>💰 Total</h4><div style="font-size:20px;font-weight:bold;color:#b8860b">' + formatRupiah(total) + '</div></div>' +
     '<div class="step-nav"><button class="btn-prev" onclick="goToStep(2)">← Kembali</button>' +
@@ -585,10 +608,17 @@ async function bayar() {
   }
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
+  var isBuyNow = params.get("type") === "buynow";
 
   const resBarang = await fetch('/barang/' + id);
   const produk = await resBarang.json();
-  var total = Number(produk.harga_tertinggi || produk.harga_awal) + 25000;
+  
+  var basePrice = Number(produk.harga_tertinggi || produk.harga_awal);
+  if (isBuyNow && produk.harga_beli_langsung) {
+      basePrice = Number(produk.harga_beli_langsung);
+  }
+  
+  var total = basePrice + 25000;
 
   var metodeLabel = selectedPaymentMethod;
   if (selectedPaymentMethod === 'bank') metodeLabel += ' - ' + selectedBank;
@@ -766,7 +796,9 @@ async function handleDaftar(e) {
 document.addEventListener("DOMContentLoaded", function () {
   renderNavbar();
   renderFooter();
-  renderGridProduk();
+  if (!window.location.pathname.includes('kategori.html')) {
+    renderGridProduk();
+  }
   renderDetailProduk();
   renderCheckout();
   renderPembayaran();

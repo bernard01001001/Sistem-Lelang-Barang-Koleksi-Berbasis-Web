@@ -4,17 +4,17 @@ const db = require('../config/db');
 
 // TAMBAH BARANG
 router.post('/', async (req, res) => {
-    const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam, tanggal_mulai } = req.body;
     try {
+        const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam, tanggal_mulai, kategori, harga_beli_langsung } = req.body;
         const durasi = parseInt(durasi_jam) || 24;
         let queryInsert, queryParams;
 
         if (tanggal_mulai) {
-            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, kategori, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8::timestamp + INTERVAL '1 hour' * $9, 'berjalan') RETURNING *";
-            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', req.body.kategori || 'Lainnya', tanggal_mulai, durasi];
+            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, kategori, harga_beli_langsung, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9::timestamp + INTERVAL '1 hour' * $10, 'berjalan') RETURNING *";
+            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', kategori || 'Lainnya', harga_beli_langsung || null, tanggal_mulai, durasi];
         } else {
-            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, kategori, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + INTERVAL '1 hour' * $8, 'berjalan') RETURNING *";
-            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', req.body.kategori || 'Lainnya', durasi];
+            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, kategori, harga_beli_langsung, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW() + INTERVAL '1 hour' * $9, 'berjalan') RETURNING *";
+            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', kategori || 'Lainnya', harga_beli_langsung || null, durasi];
         }
 
         const result = await db.query(queryInsert, queryParams);

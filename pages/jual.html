@@ -58,6 +58,12 @@
       </div>
 
       <div class="form-group">
+        <label>Harga Beli Langsung (Opsional)</label>
+        <input type="number" id="hargaBeliLangsung" placeholder="Contoh: 1500000">
+        <div style="margin-top:4px;font-size:11px;color:#999;">Biarkan kosong jika tidak ingin ada harga beli langsung.</div>
+      </div>
+
+      <div class="form-group">
         <label>Kategori</label>
         <select id="kategori" required>
           <option value="">Pilih Kategori</option>
@@ -239,6 +245,7 @@
       var deskripsi = document.getElementById('deskripsi').value.trim();
       var durasi = parseInt(document.getElementById('durasiLelang').value) || 24;
       var jadwalMulai = document.getElementById('jadwalMulai') ? document.getElementById('jadwalMulai').value : '';
+      var hargaBeliLangsung = parseInt(document.getElementById('hargaBeliLangsung').value) || null;
 
       if (!nama || !kategori || !deskripsi) {
         alert("Semua field wajib diisi!");
@@ -260,6 +267,7 @@
               id_user: user.id_user,
               gambar: uploadedImageData || "",
               kategori: kategori,
+              harga_beli_langsung: hargaBeliLangsung,
               durasi_jam: durasi,
               tanggal_mulai: jadwalMulai || null
            })
