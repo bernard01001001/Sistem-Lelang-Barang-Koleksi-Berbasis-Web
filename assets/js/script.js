@@ -189,7 +189,7 @@ async function renderDetailProduk() {
       '<div class="label">Harga Tertinggi Saat Ini</div>' +
       '<div class="value">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
       '</div>' +
-      '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">Sisa Waktu: <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
+      '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">' + (isUpcoming ? 'Lelang Dimulai Dalam:' : 'Sisa Waktu:') + ' <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
 
     var user = getUser();
     if (isUpcoming) {
@@ -218,29 +218,32 @@ async function renderDetailProduk() {
     html += '</div>';
 
     detail.innerHTML = html;
-    startDynamicCountdown(produk.tanggal_selesai, isUpcoming);
+    startDynamicCountdown(produk.tanggal_mulai, produk.tanggal_selesai, isUpcoming);
   } catch(e) {
     detail.innerHTML = "<p>Gagal memuat detail.</p>";
   }
 }
 
-function startDynamicCountdown(endTimeStr, isUpcoming) {
+function startDynamicCountdown(startTimeStr, endTimeStr, isUpcoming) {
+  const startTime = new Date(startTimeStr).getTime();
   const endTime = new Date(endTimeStr).getTime();
   
-function updateCountdown() {
+  function updateCountdown() {
     const countdownEl = document.getElementById("countdown-detail");
     if (!countdownEl) return; // Stop if element is not on page
 
-    if (isUpcoming) {
-       countdownEl.textContent = "Belum Dimulai";
-       return;
-    }
-
-    const timeLeft = endTime - Date.now();
+    const targetTime = isUpcoming ? startTime : endTime;
+    const timeLeft = targetTime - Date.now();
 
     if (timeLeft <= 0) {
-      countdownEl.textContent = "Lelang telah berakhir";
-      return;
+      if (isUpcoming) {
+        // Lelang baru saja dimulai, muat ulang halaman untuk mengubah status
+        location.reload();
+        return;
+      } else {
+        countdownEl.textContent = "Lelang telah berakhir";
+        return;
+      }
     }
 
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
