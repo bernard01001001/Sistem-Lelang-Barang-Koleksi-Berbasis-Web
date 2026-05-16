@@ -89,12 +89,6 @@
       </div>
 
       <div class="form-group">
-        <label>Jadwal Mulai Lelang (Opsional)</label>
-        <input type="datetime-local" id="jadwalMulai" placeholder="Biarkan kosong jika ingin mulai sekarang">
-        <div style="margin-top:4px;font-size:11px;color:#999;">Biarkan kosong jika lelang ingin dimulai saat ini juga. Durasi lelang akan dihitung sejak waktu mulai.</div>
-      </div>
-
-      <div class="form-group">
         <label>Tambahkan Gambar Barang</label>
         <input type="file" id="gambarBarang" accept="image/*" onchange="previewGambar(event)">
         <div id="previewContainer" style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;"></div>
@@ -215,7 +209,6 @@
       var kategori = document.getElementById('kategori').value;
       var deskripsi = document.getElementById('deskripsi').value.trim();
       var durasi = parseInt(document.getElementById('durasiLelang').value) || 24;
-      var jadwalMulai = document.getElementById('jadwalMulai') ? document.getElementById('jadwalMulai').value : '';
 
       if (!nama || !kategori || !deskripsi) {
         alert("Semua field wajib diisi!");
@@ -227,7 +220,7 @@
       }
 
       try {
-        const res = await fetch('/barang', {
+        const res = await fetch('http://localhost:3000/barang', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({
@@ -236,8 +229,7 @@
               deskripsi: deskripsi,
               id_user: user.id,
               gambar: uploadedImageData || "",
-              durasi_jam: durasi,
-              tanggal_mulai: jadwalMulai || null
+              durasi_jam: durasi
            })
         });
         if(!res.ok) throw new Error("Gagal menyimpan barang");

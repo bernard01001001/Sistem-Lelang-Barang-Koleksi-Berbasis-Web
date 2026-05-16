@@ -4,20 +4,13 @@ const db = require('../config/db');
 
 // TAMBAH BARANG
 router.post('/', async (req, res) => {
-    const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam, tanggal_mulai } = req.body;
+    const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam } = req.body;
     try {
         const durasi = parseInt(durasi_jam) || 24;
-        let queryInsert, queryParams;
-
-        if (tanggal_mulai) {
-            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, $7, $7::timestamp + INTERVAL '1 hour' * $8, 'berjalan') RETURNING *";
-            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', tanggal_mulai, durasi];
-        } else {
-            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW() + INTERVAL '1 hour' * $7, 'berjalan') RETURNING *";
-            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', durasi];
-        }
-
-        const result = await db.query(queryInsert, queryParams);
+        const result = await db.query(
+            "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '1 hour' * $7, 'berjalan') RETURNING *",
+            [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', durasi]
+        );
         res.status(201).json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -28,7 +21,7 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         // Gabungkan dengan harga tertinggi dari lelang
-        // HANYA tampilkan barang yang berstatus approved dan belum selesai
+
         const result = await db.query(`
             SELECT b.*, 
                    COALESCE((SELECT MAX(harga_penawaran) FROM tbl_lelang l WHERE l.id_barang = b.id_barang), b.harga_awal) as harga_tertinggi
