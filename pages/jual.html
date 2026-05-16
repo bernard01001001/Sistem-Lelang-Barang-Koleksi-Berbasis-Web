@@ -283,6 +283,53 @@
         alert(err.message);
       }
     }
+    
+    document.addEventListener("DOMContentLoaded", async function() {
+      var user = getUser();
+      var params = new URLSearchParams(window.location.search);
+      var resellId = params.get("resell_id");
+      
+      if (user && user.role === 'penawar') {
+          if (!resellId) {
+             alert("Anda tidak memiliki akses untuk menjual barang baru.");
+             window.location.href = "index.html";
+             return;
+          }
+      }
+      
+      if (resellId) {
+          try {
+             // Pastikan barang yang mau dijual ulang benar-benar milik user (dari endpoint pembelian)
+             const resPembelian = await fetch('/pembayaran/user/' + user.id_user);
+             const pembelian = await resPembelian.json();
+             const isOwned = pembelian.find(p => p.id_barang == resellId && p.status === 'Lunas');
+             if (!isOwned) {
+                 alert("Anda tidak memiliki barang ini atau pembayaran belum lunas.");
+                 window.location.href = "barang-saya.html";
+                 return;
+             }
+             
+             // Ambil detail barang asli
+             const res = await fetch('/barang/' + resellId);
+             const barang = await res.json();
+             document.getElementById('namaBarang').value = barang.nama_barang;
+             document.getElementById('deskripsi').value = barang.deskripsi;
+             
+             if (barang.gambar) {
+                 uploadedImageData = barang.gambar;
+                 const previewContainer = document.getElementById('previewContainer');
+                 previewContainer.innerHTML = '<div style="position:relative;display:inline-block;">' +
+                   '<img src="' + barang.gambar + '" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid #b8860b;">' +
+                   '<button type="button" onclick="this.parentElement.remove(); uploadedImageData=null;" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:none;background:#c0392b;color:white;font-size:12px;cursor:pointer;">✕</button>' +
+                   '</div>';
+             }
+             
+             document.querySelector('h1').textContent = "Jual Kembali Barang";
+             document.querySelector('p').textContent = "Atur harga awal dan durasi untuk melelang kembali barang ini";
+          } catch(e) {}
+      }
+    });
+
   </script>
 </body>
 

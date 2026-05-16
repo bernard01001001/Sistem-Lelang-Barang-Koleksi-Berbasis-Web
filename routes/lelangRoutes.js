@@ -90,4 +90,17 @@ router.get('/my-wins/:userId', async (req, res) => {
     }
 });
 
+// RIWAYAT BID (BID HISTORY)
+router.get('/history/:id_barang', async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT id_user, harga_penawaran, created_at FROM tbl_lelang WHERE id_barang = $1 ORDER BY harga_penawaran DESC",
+            [req.params.id_barang]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
