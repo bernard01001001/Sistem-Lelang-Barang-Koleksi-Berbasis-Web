@@ -311,7 +311,7 @@ async function kirimBid(e, id_barang) {
      const res = await fetch('/lelang/bid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_barang: id_barang, id_user: user.id, harga_penawaran: nilai })
+        body: JSON.stringify({ id_barang: id_barang, id_user: user.id_user, harga_penawaran: nilai })
      });
      const data = await res.json();
      if(!res.ok) throw new Error(data.message || data.error);
@@ -471,7 +471,7 @@ async function bayar() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            id_user: user.id,
+            id_user: user.id_user,
             id_barang: id,
             total: total,
             metode: metodeLabel,
@@ -558,7 +558,7 @@ async function renderBarangSaya() {
   }
 
   try {
-     const res = await fetch('/pembayaran/user/' + user.id);
+     const res = await fetch('/pembayaran/user/' + user.id_user);
      const pembelian = await res.json();
      
      if (pembelian.length === 0) {
