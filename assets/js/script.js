@@ -736,7 +736,7 @@ async function renderBarangSaya() {
          '<div class="order-body"><div class="order-details"><div>' + (p.nama_barang || 'Barang') + '</div></div>' +
          '<div class="order-price" style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">' +
          '<div>' + formatRupiah(p.total) + '</div>';
-         if (user.role === 'penawar' && p.status === 'Lunas') {
+         if (user.role && user.role.toLowerCase() === 'penawar' && p.status && p.status.trim().toLowerCase() === 'lunas') {
              html += '<a href="' + getRootPrefix() + 'pages/jual.html?resell_id=' + p.id_barang + '" class="btn" style="padding: 6px 12px; font-size: 12px;">Jual Kembali</a>';
          }
          html += '</div></div></div>';
