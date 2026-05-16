@@ -24,19 +24,66 @@
       <button onclick="filterKategori('Fashion')" class="btn" style="margin:5px;">Fashion</button>
     </div>
 
-    <div id="grid-produk" class="grid"></div>
+    <div id="produk-grid" class="grid"></div>
   </div>
 
   <div id="footer"></div>
 
-  <script src="../assets/js/script.js"></script>
+  <script src="../assets/js/script.js?v=3"></script>
   <script>
-    window.kategoriAktif = 'all';
+    function setLastViewed(id) {
+      localStorage.setItem("koleku_last_viewed_id", id);
+    }
+
+    function renderProduk(filtered) {
+      const grid = document.getElementById("produk-grid");
+      if (!filtered || filtered.length === 0) {
+        grid.innerHTML = "<p style='text-align:center;padding:40px;color:#999;'>Tidak ada barang di kategori ini.</p>";
+        return;
+      }
+      
+      let html = "";
+      filtered.forEach(function(p) {
+        html += 
+        '<a href="produk.html?id=' + p.id_barang + '" style="text-decoration:none; color:inherit;">' +
+        '<div class="card" style="cursor:pointer;">' +
+          '<img src="' + p.gambar + '" alt="' + p.nama_barang + '" style="width:100%; height:160px; object-fit:cover;">' +
+          '<div class="body">' +
+            '<div class="title">' + p.nama_barang + '</div>' +
+            '<div class="price">Rp ' + (p.harga_tertinggi || p.harga_awal).toLocaleString('id-ID') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '</a>';
+      });
+      grid.innerHTML = html;
+    }
 
     function filterKategori(kat) {
-      window.kategoriAktif = kat;
-      renderGridProduk();
+      if (kat === 'all') {
+        renderProduk(window.produkList);
+      } else {
+        const filtered = window.produkList.filter(function(item) {
+          return item.kategori === kat;
+        });
+        renderProduk(filtered);
+      }
     }
+
+    // Tampilkan semua saat halaman dibuka
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Tunggu renderNavbar dkk selesai
+      setTimeout(async () => {
+        if (!window.produkList || window.produkList.length === 0) {
+          try {
+            const res = await fetch('/barang');
+            window.produkList = await res.json();
+          } catch(e) {
+            console.error("Gagal memuat barang:", e);
+          }
+        }
+        renderProduk(window.produkList);
+      }, 500);
+    });
   </script>
 </body>
 

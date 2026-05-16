@@ -226,9 +226,9 @@
     async function handleJual(e) {
       e.preventDefault();
 
-      var user = getUser(); // fungsi getUser() dari script.js
+      var user = getUser(); 
       if (!user) {
-        alert("Silakan login dulu untuk menjual barang.");
+        showToast("Silakan login dulu untuk menjual barang.", "warning");
         window.location.href = "login.html";
         return;
       }
@@ -245,7 +245,7 @@
         return;
       }
       if (harga < HARGA_MINIMUM) {
-        alert('Harga minimum adalah Rp ' + HARGA_MINIMUM.toLocaleString('id-ID'));
+        showToast('Harga minimum adalah Rp ' + HARGA_MINIMUM.toLocaleString('id-ID'), "warning");
         return;
       }
 
@@ -259,14 +259,14 @@
               deskripsi: deskripsi,
               id_user: user.id_user,
               gambar: uploadedImageData || "",
+              kategori: kategori,
               durasi_jam: durasi,
-              tanggal_mulai: jadwalMulai || null,
-              kategori: kategori
+              tanggal_mulai: jadwalMulai || null
            })
         });
         if(!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || errData.message || "Gagal menyimpan barang (status: " + res.status + ")");
+          throw new Error(errData.error || errData.message || "Gagal menyimpan barang");
         }
         
         // Show success
@@ -300,7 +300,6 @@
       
       if (resellId) {
           try {
-             // Pastikan barang yang mau dijual ulang benar-benar milik user (dari endpoint pembelian)
              const resPembelian = await fetch('/pembayaran/user/' + user.id_user);
              const pembelian = await resPembelian.json();
              const isOwned = pembelian.find(p => p.id_barang == resellId && p.status === 'Lunas');
@@ -310,7 +309,6 @@
                  return;
              }
              
-             // Ambil detail barang asli
              const res = await fetch('/barang/' + resellId);
              const barang = await res.json();
              document.getElementById('namaBarang').value = barang.nama_barang;

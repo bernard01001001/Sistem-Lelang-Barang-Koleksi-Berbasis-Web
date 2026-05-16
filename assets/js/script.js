@@ -13,6 +13,45 @@ function getAssetPrefix() {
   return isInPagesFolder() ? '../assets/' : 'assets/';
 }
 
+// Global Variables
+window.produkList = [];
+
+// === PREMIUM TOAST SYSTEM ===
+function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  let icon = '🔔';
+  if (type === 'success') icon = '✅';
+  if (type === 'error') icon = '❌';
+  if (type === 'warning') icon = '⚠️';
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-message">${message}</div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove
+  setTimeout(() => {
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// Override alert for convenience
+window.alert = function(msg) {
+  showToast(msg, 'info');
+};
+
 function getUser() {
   const user = localStorage.getItem("koleku_user");
   return user ? JSON.parse(user) : null;
@@ -100,19 +139,16 @@ async function renderGridProduk() {
 
   try {
     const res = await fetch('/barang');
-    const produkList = await res.json();
+    const data = await res.json();
+    window.produkList = data; // Simpan secara global
     
     var pp = getPagePrefix();
-    let displayList = produkList;
+    let displayList = window.produkList;
     const isLelangAktifPage = window.location.pathname.includes('lelang-aktif.html');
     const now = new Date();
 
     if (isLelangAktifPage) {
        displayList = produkList.filter(p => new Date(p.tanggal_mulai) <= now);
-    }
-    
-    if (window.kategoriAktif && window.kategoriAktif !== 'all') {
-       displayList = displayList.filter(p => p.kategori === window.kategoriAktif);
     }
 
     if(displayList.length === 0) {
@@ -322,12 +358,12 @@ async function kirimBid(e, id_barang) {
   e.preventDefault();
   var user = getUser();
   if (!user) {
-    alert("Silakan login dulu untuk menawar.");
+    showToast("Silakan login dulu untuk menawar.", "warning");
     window.location.href = "login.html";
     return;
   }
   if (user.role === 'pelelang') {
-    alert("Pelelang tidak dapat menawar barang.");
+    showToast("Pelelang tidak dapat menawar barang.", "error");
     return;
   }
   var nilai = parseInt(document.getElementById("bid-input").value);
