@@ -21,6 +21,7 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         // Gabungkan dengan harga tertinggi dari lelang
+
         const result = await db.query(`
             SELECT b.*, 
                    COALESCE((SELECT MAX(harga_penawaran) FROM tbl_lelang l WHERE l.id_barang = b.id_barang), b.harga_awal) as harga_tertinggi

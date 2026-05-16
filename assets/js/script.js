@@ -26,17 +26,24 @@ function renderNavbar() {
   var menuKanan = "";
 
   if (user) {
+    let extraMenu = '';
+    if (user.role === 'admin') {
+      extraMenu += `<a href="${pp}admin.html">Dashboard Admin</a>`;
+      extraMenu += `<a href="${pp}jual.html" class="btn">Jual Barang</a>`;
+    } else if (user.role === 'pelelang') {
+      extraMenu += `<a href="${pp}jual.html" class="btn">Jual Barang</a>`;
+    }
+
     menuKanan = `
-      <span style="font-weight:bold;color:#3f2e1e">Halo, ${user.nama}</span>
+      <span style="font-weight:bold;color:#3f2e1e">Halo, ${user.nama} (${user.role})</span>
       <a href="${pp}barang-saya.html">Barang Saya</a>
+      ${extraMenu}
       <a href="#" onclick="logout()">Keluar</a>
-      <a href="${pp}jual.html" class="btn">Jual Barang</a>
     `;
   } else {
     menuKanan = `
       <a href="${pp}login.html">Masuk</a>
       <a href="${pp}daftar.html">Daftar</a>
-      <a href="${pp}jual.html" class="btn">Jual Barang</a>
     `;
   }
 
@@ -96,15 +103,33 @@ async function renderGridProduk() {
     const produkList = await res.json();
     
     var pp = getPagePrefix();
-    var html = "";
-    if(produkList.length === 0) {
+    let displayList = produkList;
+    const isLelangAktifPage = window.location.pathname.includes('lelang-aktif.html');
+    const now = new Date();
+
+    if (isLelangAktifPage) {
+       displayList = produkList.filter(p => new Date(p.tanggal_mulai) <= now);
+    }
+
+    if(displayList.length === 0) {
        grid.innerHTML = "<p>Tidak ada barang lelang saat ini.</p>";
        return;
     }
 
-    for (var i = 0; i < produkList.length; i++) {
-      var p = produkList[i];
-      var sisaWaktu = new Date(p.tanggal_selesai) > new Date() ? "Berjalan" : "Berakhir";
+    for (var i = 0; i < displayList.length; i++) {
+      var p = displayList[i];
+      var startDate = new Date(p.tanggal_mulai);
+      var endDate = new Date(p.tanggal_selesai);
+      
+      var metaStatus = "";
+      if (startDate > now) {
+         metaStatus = "Akan Datang: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'});
+      } else if (endDate > now) {
+         metaStatus = "Berjalan (Sisa: " + endDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
+      } else {
+         metaStatus = "Berakhir";
+      }
+
       html +=
         '<a href="' + pp + 'produk.html?id=' + p.id_barang + '">' +
         '<div class="card">' +
@@ -112,12 +137,13 @@ async function renderGridProduk() {
         '<div class="body">' +
         '<div class="title">' + p.nama_barang + '</div>' +
         '<div class="price">' + formatRupiah(p.harga_tertinggi || p.harga_awal) + '</div>' +
-        '<div class="meta">Status: ' + sisaWaktu + '</div>' +
+        '<div class="meta">Status: ' + metaStatus + '</div>' +
         '</div></div></a>';
     }
     grid.innerHTML = html;
   } catch(e) {
-    grid.innerHTML = "<p>Gagal memuat barang.</p>";
+    console.error(e);
+    grid.innerHTML = "<p>Gagal memuat barang. Error: " + e.message + "</p>";
   }
 }
 
@@ -136,9 +162,18 @@ async function renderDetailProduk() {
        return;
     }
     const produk = await res.json();
-    
-    var sisaWaktuStr = new Date(produk.tanggal_selesai) > new Date() ? new Date(produk.tanggal_selesai).toLocaleString() : "Waktu Habis";
     var minBid = Number(produk.harga_tertinggi || produk.harga_awal) + 10000;
+    
+    var now = new Date();
+    var startDate = new Date(produk.tanggal_mulai);
+    var isUpcoming = startDate > now;
+    var sisaWaktuStr = "Waktu Habis";
+    
+    if (isUpcoming) {
+        sisaWaktuStr = "Dimulai pada: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'});
+    } else if (new Date(produk.tanggal_selesai) > now) {
+        sisaWaktuStr = new Date(produk.tanggal_selesai).toLocaleString();
+    }
 
     var html =
       '<div class="img-box"><img src="' + produk.gambar + '" alt="' + produk.nama_barang + '" style="width:100%; border-radius:8px;"></div>' +
@@ -153,17 +188,103 @@ async function renderDetailProduk() {
       '<div class="label">Harga Tertinggi Saat Ini</div>' +
       '<div class="value">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
       '</div>' +
-      '<div class="timer">Batas Waktu: ' + sisaWaktuStr + '</div>' +
-      '<form class="bid-form" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
-      '<input type="number" id="bid-input" placeholder="Tawaran Anda (min ' + minBid + ')" required>' +
-      '<button class="btn" type="submit">Tawar</button>' +
-      '</form>' +
-      '<a href="checkout.html?id=' + produk.id_barang + '" class="btn btn-block">Beli Sekarang</a>' +
-      '</div>';
+      '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">Sisa Waktu: <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
+
+    var user = getUser();
+    if (isUpcoming) {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
+                '<strong>Lelang Belum Dimulai</strong><br>Barang ini dijadwalkan untuk lelang pada tanggal ' + startDate.toLocaleDateString('id-ID') + '.' +
+                '</div>';
+    } else if (!user || user.role !== 'pelelang') {
+        html += '<label style="font-weight:bold;font-size:14px;color:#555;margin-bottom:8px;display:block;">Masukkan Tawaran (min Rp ' + minBid.toLocaleString('id-ID') + ')</label>' +
+                '<form class="bid-form" style="display:block; margin-bottom:15px;" onsubmit="kirimBid(event,' + produk.id_barang + ')">' +
+                '<div style="display:flex;align-items:center;gap:0;border:2px solid #b8860b;border-radius:6px;overflow:hidden;background:white;margin-bottom:8px;">' +
+                '<button type="button" onclick="kurangiTawaran(' + minBid + ', ' + produk.harga_awal + ')" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#f8f1e3,#efe6d5);font-size:22px;font-weight:bold;color:#b8860b;cursor:pointer;" onmouseover="this.style.background=\'#e8d9c0\'" onmouseout="this.style.background=\'linear-gradient(135deg,#f8f1e3,#efe6d5)\'">−</button>' +
+                '<input type="number" id="bid-input" value="' + minBid + '" min="' + minBid + '" required style="flex:1;border:none;border-left:1px solid #e5d9c8;border-right:1px solid #e5d9c8;text-align:center;font-size:18px;font-weight:bold;padding:12px;outline:none;" oninput="updateTawarPreview(' + minBid + ')">' +
+                '<button type="button" onclick="tambahTawaran(' + produk.harga_awal + ')" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#b8860b,#d4a017);font-size:22px;font-weight:bold;color:white;cursor:pointer;" onmouseover="this.style.background=\'#a07509\'" onmouseout="this.style.background=\'linear-gradient(135deg,#b8860b,#d4a017)\'">+</button>' +
+                '</div>' +
+                '<div id="tawar-preview" style="margin-top:8px;font-size:14px;color:#b8860b;font-weight:600;">Rp ' + minBid.toLocaleString('id-ID') + '</div>' +
+                '<div style="margin-top:4px;margin-bottom:12px;font-size:11px;color:#999;">Tombol +/- menambah/kurangi 10% dari harga awal</div>' +
+                '<button class="btn" type="submit" style="width:100%; padding:14px; font-size:16px;">Kirim Tawaran</button>' +
+                '</form>' +
+                '<a href="checkout.html?id=' + produk.id_barang + '" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:white; color:#b8860b; border:2px solid #b8860b;">Beli Sekarang</a>';
+    } else {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
+                '<strong>Anda masuk sebagai Pelelang.</strong><br>Pelelang tidak dapat menawar atau membeli barang.' +
+                '</div>';
+    }
+
+    html += '</div>';
 
     detail.innerHTML = html;
+    startDynamicCountdown(produk.tanggal_selesai, isUpcoming);
   } catch(e) {
     detail.innerHTML = "<p>Gagal memuat detail.</p>";
+  }
+}
+
+function startDynamicCountdown(endTimeStr, isUpcoming) {
+  const endTime = new Date(endTimeStr).getTime();
+  
+function updateCountdown() {
+    const countdownEl = document.getElementById("countdown-detail");
+    if (!countdownEl) return; // Stop if element is not on page
+
+    if (isUpcoming) {
+       countdownEl.textContent = "Belum Dimulai";
+       return;
+    }
+
+    const timeLeft = endTime - Date.now();
+
+    if (timeLeft <= 0) {
+      countdownEl.textContent = "Lelang telah berakhir";
+      return;
+    }
+
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    countdownEl.textContent = `${days} hari ${hours} jam ${minutes} menit ${seconds} detik`;
+  }
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+}
+
+function tambahTawaran(hargaAwal) {
+  var input = document.getElementById('bid-input');
+  var current = parseInt(input.value) || 0;
+  var step = Math.round(hargaAwal * 0.10);
+  if (step < 10000) step = 10000;
+  input.value = current + step;
+  updateTawarPreview(input.getAttribute('min'));
+}
+
+function kurangiTawaran(minBid, hargaAwal) {
+  var input = document.getElementById('bid-input');
+  var current = parseInt(input.value) || 0;
+  var step = Math.round(hargaAwal * 0.10);
+  if (step < 10000) step = 10000;
+  var newVal = current - step;
+  if (newVal < minBid) newVal = minBid;
+  input.value = newVal;
+  updateTawarPreview(minBid);
+}
+
+function updateTawarPreview(minBid) {
+  var input = document.getElementById('bid-input');
+  var val = parseInt(input.value) || 0;
+  minBid = parseInt(minBid) || 0;
+  if (val < minBid) {
+    input.value = minBid;
+    val = minBid;
+  }
+  var preview = document.getElementById('tawar-preview');
+  if (preview) {
+    preview.textContent = 'Rp ' + val.toLocaleString('id-ID');
   }
 }
 
@@ -173,6 +294,10 @@ async function kirimBid(e, id_barang) {
   if (!user) {
     alert("Silakan login dulu untuk menawar.");
     window.location.href = "login.html";
+    return;
+  }
+  if (user.role === 'pelelang') {
+    alert("Pelelang tidak dapat menawar barang.");
     return;
   }
   var nilai = parseInt(document.getElementById("bid-input").value);
@@ -322,6 +447,10 @@ async function renderStep3Review() {
 async function bayar() {
   var user = getUser();
   if (!user) return;
+  if (user.role === 'pelelang') {
+    alert("Pelelang tidak dapat membeli barang.");
+    return;
+  }
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
 
@@ -479,13 +608,14 @@ async function handleDaftar(e) {
   var namaDepan = document.getElementById("namaDepan").value.trim();
   var namaBelakang = document.getElementById("namaBelakang").value.trim();
   var password = document.getElementById("password").value;
+  var role = document.getElementById("role") ? document.getElementById("role").value : 'penawar';
   var errorEl = document.getElementById("error");
 
   try {
      const res = await fetch('http://localhost:3000/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nama: namaDepan + ' ' + namaBelakang, email, password, role: 'penawar' })
+        body: JSON.stringify({ nama: namaDepan + ' ' + namaBelakang, email, password, role: role })
      });
      const data = await res.json();
      if(!res.ok) throw new Error(data.error || data.message);
