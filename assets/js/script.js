@@ -13,6 +13,45 @@ function getAssetPrefix() {
   return isInPagesFolder() ? '../assets/' : 'assets/';
 }
 
+// Global Variables
+window.produkList = [];
+
+// === PREMIUM TOAST SYSTEM ===
+function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  let icon = '🔔';
+  if (type === 'success') icon = '✅';
+  if (type === 'error') icon = '❌';
+  if (type === 'warning') icon = '⚠️';
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-message">${message}</div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove
+  setTimeout(() => {
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// Override alert for convenience
+window.alert = function(msg) {
+  showToast(msg, 'info');
+};
+
 function getUser() {
   const user = localStorage.getItem("koleku_user");
   return user ? JSON.parse(user) : null;
@@ -95,15 +134,18 @@ function formatRupiah(angka) {
 }
 
 async function renderGridProduk() {
-  var grid = document.getElementById("grid-produk");
+  var grid = document.getElementById("grid-produk") || document.getElementById("produk-grid");
   if (!grid) return;
 
   try {
-    const res = await fetch('http://localhost:3000/barang');
-    const produkList = await res.json();
+
+    const res = await fetch('/barang');
+    const data = await res.json();
+    window.produkList = data; // Simpan secara global
+
     
     var pp = getPagePrefix();
-    let displayList = produkList;
+    let displayList = window.produkList;
     const isLelangAktifPage = window.location.pathname.includes('lelang-aktif.html');
     const now = new Date();
 
@@ -116,18 +158,21 @@ async function renderGridProduk() {
        return;
     }
 
+    var html = "";
     for (var i = 0; i < displayList.length; i++) {
       var p = displayList[i];
       var startDate = new Date(p.tanggal_mulai);
       var endDate = new Date(p.tanggal_selesai);
       
       var metaStatus = "";
-      if (startDate > now) {
+      if (p.status_lelang === 'terjual') {
+         metaStatus = '<span style="color:#27ae60;font-weight:bold;">Sudah Dibeli</span>';
+      } else if (p.status_lelang === 'selesai' || endDate <= now) {
+         metaStatus = '<span style="color:#c0392b;font-weight:bold;">Lelang Berakhir</span>';
+      } else if (startDate > now) {
          metaStatus = "Akan Datang: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'});
-      } else if (endDate > now) {
-         metaStatus = "Berjalan (Sisa: " + endDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
       } else {
-         metaStatus = "Berakhir";
+         metaStatus = "Berjalan (Dimulai: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
       }
 
       html +=
@@ -137,6 +182,7 @@ async function renderGridProduk() {
         '<div class="body">' +
         '<div class="title">' + p.nama_barang + '</div>' +
         '<div class="price">' + formatRupiah(p.harga_tertinggi || p.harga_awal) + '</div>' +
+        (p.harga_beli_langsung ? '<div style="font-size:11px; color:#b8860b; font-weight:bold;">Beli Langsung: ' + formatRupiah(p.harga_beli_langsung) + '</div>' : '') +
         '<div class="meta">Status: ' + metaStatus + '</div>' +
         '</div></div></a>';
     }
@@ -169,9 +215,13 @@ async function renderDetailProduk() {
     var isUpcoming = startDate > now;
     var sisaWaktuStr = "Waktu Habis";
     
-    if (isUpcoming) {
+    if (produk.status_lelang === 'terjual') {
+        sisaWaktuStr = "Barang Sudah Dibeli";
+    } else if (produk.status_lelang === 'selesai' || new Date(produk.tanggal_selesai) <= now) {
+        sisaWaktuStr = "Lelang Berakhir";
+    } else if (isUpcoming) {
         sisaWaktuStr = "Dimulai pada: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'});
-    } else if (new Date(produk.tanggal_selesai) > now) {
+    } else {
         sisaWaktuStr = new Date(produk.tanggal_selesai).toLocaleString();
     }
 
@@ -186,12 +236,31 @@ async function renderDetailProduk() {
       '</div>' +
       '<div class="harga-box">' +
       '<div class="label">Harga Tertinggi Saat Ini</div>' +
-      '<div class="value">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
-      '</div>' +
-      '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">Sisa Waktu: <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
+      '<div class="value" id="harga-tertinggi-display">' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div>' +
+      '</div>';
+
+    if (produk.harga_beli_langsung) {
+      html += '<div class="harga-box" style="border: 2px solid #b8860b; background: #fffaf0;">' +
+              '<div class="label" style="color:#b8860b; font-weight:bold;">Harga Beli Langsung</div>' +
+              '<div class="value" style="color:#b8860b;">' + formatRupiah(produk.harga_beli_langsung) + '</div>' +
+              '</div>';
+    }
+
+    html += '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">' + (isUpcoming ? 'Lelang Dimulai Dalam:' : 'Sisa Waktu:') + ' <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
+
+    var isSold = produk.status_lelang === 'terjual';
+    var isEnded = produk.status_lelang === 'selesai' || new Date(produk.tanggal_selesai) <= now;
 
     var user = getUser();
-    if (isUpcoming) {
+    if (isSold) {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; text-align: center; color: #2e7d32;">' +
+                '<strong>Barang ini sudah dibeli.</strong>' +
+                '</div>';
+    } else if (isEnded) {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; text-align: center; color: #c62828;">' +
+                '<strong>Lelang telah berakhir.</strong>' +
+                '</div>';
+    } else if (isUpcoming) {
         html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
                 '<strong>Lelang Belum Dimulai</strong><br>Barang ini dijadwalkan untuk lelang pada tanggal ' + startDate.toLocaleDateString('id-ID') + '.' +
                 '</div>';
@@ -207,7 +276,13 @@ async function renderDetailProduk() {
                 '<div style="margin-top:4px;margin-bottom:12px;font-size:11px;color:#999;">Tombol +/- menambah/kurangi 10% dari harga awal</div>' +
                 '<button class="btn" type="submit" style="width:100%; padding:14px; font-size:16px;">Kirim Tawaran</button>' +
                 '</form>' +
-                '<a href="checkout.html?id=' + produk.id_barang + '" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:white; color:#b8860b; border:2px solid #b8860b;">Beli Sekarang</a>';
+                '<div id="bid-message" style="margin-bottom:15px; font-weight:bold; text-align:center;"></div>';
+        
+        if (produk.harga_beli_langsung) {
+            html += '<a href="checkout.html?id=' + produk.id_barang + '&type=buynow" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:#b8860b; color:white; margin-bottom:10px;">Beli Sekarang (' + formatRupiah(produk.harga_beli_langsung) + ')</a>';
+        }
+        
+        html += '<a href="checkout.html?id=' + produk.id_barang + '" class="btn" style="display:block; text-align:center; width:100%; padding:14px; font-size:16px; box-sizing:border-box; background:white; color:#b8860b; border:2px solid #b8860b;">Lanjutkan ke Checkout</a>';
     } else {
         html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
                 '<strong>Anda masuk sebagai Pelelang.</strong><br>Pelelang tidak dapat menawar atau membeli barang.' +
@@ -217,29 +292,56 @@ async function renderDetailProduk() {
     html += '</div>';
 
     detail.innerHTML = html;
-    startDynamicCountdown(produk.tanggal_selesai, isUpcoming);
+    
+    if (!isSold && !isEnded) {
+        startDynamicCountdown(produk.tanggal_mulai, produk.tanggal_selesai, isUpcoming);
+        
+        // Polling harga tertinggi
+        if (window.bidPollInterval) clearInterval(window.bidPollInterval);
+        if (!isUpcoming && new Date(produk.tanggal_selesai) > now) {
+          window.bidPollInterval = setInterval(async () => {
+            try {
+              const pollRes = await fetch('/barang/' + id);
+              if (pollRes.ok) {
+                const pollData = await pollRes.json();
+                const displayEl = document.getElementById('harga-tertinggi-display');
+                if (displayEl) {
+                  displayEl.textContent = formatRupiah(pollData.harga_tertinggi || pollData.harga_awal);
+                }
+              }
+            } catch(e) {}
+          }, 5000);
+        }
+    }
+    
+    // Render Riwayat Bid
+    renderRiwayatBid(id);
+    
   } catch(e) {
     detail.innerHTML = "<p>Gagal memuat detail.</p>";
   }
 }
 
-function startDynamicCountdown(endTimeStr, isUpcoming) {
+function startDynamicCountdown(startTimeStr, endTimeStr, isUpcoming) {
+  const startTime = new Date(startTimeStr).getTime();
   const endTime = new Date(endTimeStr).getTime();
   
-function updateCountdown() {
+  function updateCountdown() {
     const countdownEl = document.getElementById("countdown-detail");
     if (!countdownEl) return; // Stop if element is not on page
 
-    if (isUpcoming) {
-       countdownEl.textContent = "Belum Dimulai";
-       return;
-    }
-
-    const timeLeft = endTime - Date.now();
+    const targetTime = isUpcoming ? startTime : endTime;
+    const timeLeft = targetTime - Date.now();
 
     if (timeLeft <= 0) {
-      countdownEl.textContent = "Lelang telah berakhir";
-      return;
+      if (isUpcoming) {
+        // Lelang baru saja dimulai, muat ulang komponen detail
+        renderDetailProduk();
+        return;
+      } else {
+        countdownEl.textContent = "Lelang telah berakhir";
+        return;
+      }
     }
 
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
@@ -292,12 +394,12 @@ async function kirimBid(e, id_barang) {
   e.preventDefault();
   var user = getUser();
   if (!user) {
-    alert("Silakan login dulu untuk menawar.");
+    showToast("Silakan login dulu untuk menawar.", "warning");
     window.location.href = "login.html";
     return;
   }
   if (user.role === 'pelelang') {
-    alert("Pelelang tidak dapat menawar barang.");
+    showToast("Pelelang tidak dapat menawar barang.", "error");
     return;
   }
   var nilai = parseInt(document.getElementById("bid-input").value);
@@ -307,19 +409,86 @@ async function kirimBid(e, id_barang) {
   }
   
   try {
-     const res = await fetch('http://localhost:3000/lelang/bid', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_barang: id_barang, id_user: user.id, harga_penawaran: nilai })
-     });
-     const data = await res.json();
-     if(!res.ok) throw new Error(data.message || data.error);
-     alert("Tawaran berhasil dikirim!");
-     window.location.reload();
-  } catch(err) {
-     alert(err.message);
-  }
+
+      const res = await fetch('/lelang/bid', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ id_barang: id_barang, id_user: user.id_user, harga_penawaran: nilai })
+      });
+      const data = await res.json();
+      const msgEl = document.getElementById("bid-message");
+      if(!res.ok) throw new Error(data.message || data.error);
+      
+      if (msgEl) {
+         msgEl.style.color = "green";
+         msgEl.textContent = "Tawaran berhasil dikirim!";
+         setTimeout(() => msgEl.textContent = "", 3000);
+      }
+      showToast("Tawaran berhasil dikirim!", "success");
+      
+      // Update displayed max bid
+      const displayEl = document.getElementById('harga-tertinggi-display');
+      if (displayEl) {
+          displayEl.textContent = formatRupiah(nilai);
+      }
+      
+      // Update input and minimum step for next bid
+      var minBid = nilai + 10000;
+      document.getElementById("bid-input").min = minBid;
+      document.getElementById("bid-input").value = minBid;
+      updateTawarPreview(minBid);
+      
+      // Refresh bid history
+      renderRiwayatBid(id_barang);
+   } catch(err) {
+      const msgEl = document.getElementById("bid-message");
+      if (msgEl) {
+         msgEl.style.color = "red";
+         msgEl.textContent = err.message;
+      } else {
+         alert(err.message);
+      }
+   }
 }
+
+async function renderRiwayatBid(id_barang) {
+  var detail = document.getElementById("detail-produk");
+  if (!detail) return;
+  var user = getUser();
+  
+  try {
+     const res = await fetch('/lelang/history/' + id_barang);
+     if (!res.ok) return;
+     const bids = await res.json();
+     
+     let historyEl = document.getElementById("bid-history");
+     if (!historyEl) {
+         historyEl = document.createElement("div");
+         historyEl.id = "bid-history";
+         historyEl.style.marginTop = "30px";
+         detail.appendChild(historyEl);
+     }
+     
+     if (bids.length === 0) {
+         historyEl.innerHTML = '<h3>Riwayat Bid</h3><p>Belum ada tawaran.</p>';
+         return;
+     }
+     
+     let html = '<h3>Riwayat Bid</h3><ul style="list-style:none; padding:0; border: 1px solid #e5d9c8; border-radius: 8px; overflow:hidden;">';
+     for (let i = 0; i < bids.length; i++) {
+         const bid = bids[i];
+         const isYou = user && bid.id_user === user.id_user;
+         const bidderName = isYou ? '<strong>Anda</strong>' : 'Penawar #' + bid.id_user;
+         const bg = isYou ? '#f0f8ff' : (i === 0 ? '#f8f1e3' : 'white');
+         
+         html += '<li style="padding:10px 15px; border-bottom:1px solid #e5d9c8; background:'+bg+'; display:flex; justify-content:space-between;">' +
+                 '<span>' + bidderName + '</span>' +
+                 '<span style="font-weight:bold; color:#b8860b;">' + formatRupiah(bid.harga_penawaran) + '</span>' +
+                 '</li>';
+     }
+     html += '</ul>';
+     historyEl.innerHTML = html;
+  } catch(e) {}
 
 // === CHECKOUT STATE ===
 var checkoutStep = 1;
@@ -427,17 +596,27 @@ async function renderStep3Review() {
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
-  const res = await fetch('http://localhost:3000/barang/' + id);
+
+  var isBuyNow = params.get("type") === "buynow";
+  
+  const res = await fetch('/barang/' + id);
+
   const produk = await res.json();
   var ongkir = 25000;
-  var total = Number(produk.harga_tertinggi || produk.harga_awal) + ongkir;
+  
+  var basePrice = Number(produk.harga_tertinggi || produk.harga_awal);
+  if (isBuyNow && produk.harga_beli_langsung) {
+      basePrice = Number(produk.harga_beli_langsung);
+  }
+  
+  var total = basePrice + ongkir;
 
   var metodeLabel = selectedPaymentMethod;
   if(selectedPaymentMethod === 'bank') metodeLabel += ' - ' + selectedBank;
   if(selectedPaymentMethod === 'ewallet') metodeLabel += ' - ' + selectedEwallet;
 
   box.innerHTML =
-    '<div class="review-section"><h4>📦 Produk</h4><div>' + produk.nama_barang + ' - ' + formatRupiah(produk.harga_tertinggi || produk.harga_awal) + '</div></div>' +
+    '<div class="review-section"><h4>📦 Produk</h4><div>' + produk.nama_barang + ' - ' + formatRupiah(basePrice) + '</div></div>' +
     '<div class="review-section"><h4>💳 Pembayaran</h4><div>' + metodeLabel + '</div></div>' +
     '<div class="review-section"><h4>💰 Total</h4><div style="font-size:20px;font-weight:bold;color:#b8860b">' + formatRupiah(total) + '</div></div>' +
     '<div class="step-nav"><button class="btn-prev" onclick="goToStep(2)">← Kembali</button>' +
@@ -453,10 +632,17 @@ async function bayar() {
   }
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
+  var isBuyNow = params.get("type") === "buynow";
 
   const resBarang = await fetch('http://localhost:3000/barang/' + id);
   const produk = await resBarang.json();
-  var total = Number(produk.harga_tertinggi || produk.harga_awal) + 25000;
+  
+  var basePrice = Number(produk.harga_tertinggi || produk.harga_awal);
+  if (isBuyNow && produk.harga_beli_langsung) {
+      basePrice = Number(produk.harga_beli_langsung);
+  }
+  
+  var total = basePrice + 25000;
 
   var metodeLabel = selectedPaymentMethod;
   if (selectedPaymentMethod === 'bank') metodeLabel += ' - ' + selectedBank;
@@ -470,7 +656,7 @@ async function bayar() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            id_user: user.id,
+            id_user: user.id_user,
             id_barang: id,
             total: total,
             metode: metodeLabel,
@@ -557,7 +743,9 @@ async function renderBarangSaya() {
   }
 
   try {
-     const res = await fetch('http://localhost:3000/pembayaran/user/' + user.id);
+
+     const res = await fetch('/pembayaran/user/' + user.id_user);
+
      const pembelian = await res.json();
      
      if (pembelian.length === 0) {
@@ -572,7 +760,12 @@ async function renderBarangSaya() {
          '<div class="order-card">' +
          '<div class="order-header"><span>#' + p.id_pembayaran + '</span><span>' + p.status + '</span></div>' +
          '<div class="order-body"><div class="order-details"><div>' + (p.nama_barang || 'Barang') + '</div></div>' +
-         '<div class="order-price"><div>' + formatRupiah(p.total) + '</div></div></div></div>';
+         '<div class="order-price" style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">' +
+         '<div>' + formatRupiah(p.total) + '</div>';
+         if (user.role && user.role.toLowerCase() === 'penawar' && p.status && p.status.trim().toLowerCase() === 'lunas') {
+             html += '<a href="' + getRootPrefix() + 'pages/jual.html?resell_id=' + p.id_barang + '" class="btn" style="padding: 6px 12px; font-size: 12px;">Jual Kembali</a>';
+         }
+         html += '</div></div></div>';
      }
      html += '</div>';
      box.innerHTML = html;
@@ -629,7 +822,9 @@ async function handleDaftar(e) {
 document.addEventListener("DOMContentLoaded", function () {
   renderNavbar();
   renderFooter();
-  renderGridProduk();
+  if (!window.location.pathname.includes('kategori.html')) {
+    renderGridProduk();
+  }
   renderDetailProduk();
   renderCheckout();
   renderPembayaran();

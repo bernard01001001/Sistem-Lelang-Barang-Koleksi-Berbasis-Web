@@ -25,17 +25,14 @@ router.use('/admin', adminRoutes);
 router.use('/lelang', lelangRoutes);
 router.use('/pembayaran', pembayaranRoutes);
 
-app.use('/.netlify/functions/api', router);
 app.use('/', router);
 
 const PORT = process.env.PORT || 3000;
 
-// We only listen if not running in a serverless environment
-if (!process.env.NETLIFY) {
-    app.listen(PORT, () => {
-        console.log(`Server jalan di http://localhost:${PORT}`);
-    });
-}
+app.listen(PORT, () => {
+    console.log(`Server jalan di http://localhost:${PORT}`);
+});
+
 
 module.exports = app;
 

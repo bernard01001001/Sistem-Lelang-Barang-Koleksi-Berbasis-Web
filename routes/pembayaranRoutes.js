@@ -63,7 +63,16 @@ router.put('/confirm/:trx', async (req, res) => {
     try {
         const { trx } = req.params;
         
+        // 1. Update status pembayaran menjadi Lunas
         await query("UPDATE tbl_pembayaran SET status = 'Lunas', paid_at = NOW() WHERE id_pembayaran = $1", [trx]);
+
+        // 2. Ambil id_barang dari transaksi ini & ambil id_user (pembeli)
+        const trxResult = await query("SELECT id_barang, id_user FROM tbl_pembayaran WHERE id_pembayaran = $1", [trx]);
+        if (trxResult.rows.length > 0) {
+            const { id_barang, id_user } = trxResult.rows[0];
+            // 3. Update status barang menjadi 'terjual' dan set pemenang
+            await query("UPDATE tbl_barang SET status_lelang = 'terjual', id_pemenang = $1 WHERE id_barang = $2", [id_user, id_barang]);
+        }
 
         res.json({ message: "Pembayaran dikonfirmasi!" });
     } catch (err) {

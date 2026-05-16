@@ -58,6 +58,12 @@
       </div>
 
       <div class="form-group">
+        <label>Harga Beli Langsung (Opsional)</label>
+        <input type="number" id="hargaBeliLangsung" placeholder="Contoh: 1500000">
+        <div style="margin-top:4px;font-size:11px;color:#999;">Biarkan kosong jika tidak ingin ada harga beli langsung.</div>
+      </div>
+
+      <div class="form-group">
         <label>Kategori</label>
         <select id="kategori" required>
           <option value="">Pilih Kategori</option>
@@ -118,9 +124,34 @@
 
   <div id="footer"></div>
 
-  <script src="../assets/js/script.js"></script>
+  <script src="../assets/js/script.js?v=5"></script>
   <script>
     var uploadedImageData = null;
+
+    function compressImage(file, maxWidth, quality) {
+      return new Promise(function(resolve) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var width = img.width;
+            var height = img.height;
+            if (width > maxWidth) {
+              height = Math.round(height * maxWidth / width);
+              width = maxWidth;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
 
     function previewGambar(event) {
       const file = event.target.files[0];
@@ -129,16 +160,15 @@
 
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        uploadedImageData = e.target.result;
+      compressImage(file, 800, 0.6).then(function(compressedData) {
+        uploadedImageData = compressedData;
 
         const imgWrapper = document.createElement('div');
         imgWrapper.style.position = 'relative';
         imgWrapper.style.display = 'inline-block';
 
         const img = document.createElement('img');
-        img.src = e.target.result;
+        img.src = compressedData;
         img.style.width = '120px';
         img.style.height = '120px';
         img.style.objectFit = 'cover';
@@ -158,8 +188,7 @@
         imgWrapper.appendChild(img);
         imgWrapper.appendChild(removeBtn);
         previewContainer.appendChild(imgWrapper);
-      };
-      reader.readAsDataURL(file);
+      });
     }
 
     var HARGA_MINIMUM = 100000;
@@ -197,9 +226,9 @@
     async function handleJual(e) {
       e.preventDefault();
 
-      var user = getUser(); // fungsi getUser() dari script.js
+      var user = getUser(); 
       if (!user) {
-        alert("Silakan login dulu untuk menjual barang.");
+        showToast("Silakan login dulu untuk menjual barang.", "warning");
         window.location.href = "login.html";
         return;
       }
@@ -209,13 +238,16 @@
       var kategori = document.getElementById('kategori').value;
       var deskripsi = document.getElementById('deskripsi').value.trim();
       var durasi = parseInt(document.getElementById('durasiLelang').value) || 24;
+      var jadwalMulai = document.getElementById('jadwalMulai') ? document.getElementById('jadwalMulai').value : '';
+      var hargaBeliLangsung = parseInt(document.getElementById('hargaBeliLangsung').value) || null;
+
 
       if (!nama || !kategori || !deskripsi) {
         alert("Semua field wajib diisi!");
         return;
       }
       if (harga < HARGA_MINIMUM) {
-        alert('Harga minimum adalah Rp ' + HARGA_MINIMUM.toLocaleString('id-ID'));
+        showToast('Harga minimum adalah Rp ' + HARGA_MINIMUM.toLocaleString('id-ID'), "warning");
         return;
       }
 
@@ -227,12 +259,20 @@
               nama_barang: nama,
               harga_awal: harga,
               deskripsi: deskripsi,
-              id_user: user.id,
+              id_user: user.id_user,
               gambar: uploadedImageData || "",
-              durasi_jam: durasi
+
+              kategori: kategori,
+              harga_beli_langsung: hargaBeliLangsung,
+              durasi_jam: durasi,
+              tanggal_mulai: jadwalMulai || null
+
            })
         });
-        if(!res.ok) throw new Error("Gagal menyimpan barang");
+        if(!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || errData.message || "Gagal menyimpan barang");
+        }
         
         // Show success
         document.querySelector('form').style.display = 'none';
@@ -249,6 +289,51 @@
         alert(err.message);
       }
     }
+    
+    document.addEventListener("DOMContentLoaded", async function() {
+      var user = getUser();
+      var params = new URLSearchParams(window.location.search);
+      var resellId = params.get("resell_id");
+      
+      if (user && user.role === 'penawar') {
+          if (!resellId) {
+             alert("Anda tidak memiliki akses untuk menjual barang baru.");
+             window.location.href = "index.html";
+             return;
+          }
+      }
+      
+      if (resellId) {
+          try {
+             const resPembelian = await fetch('/pembayaran/user/' + user.id_user);
+             const pembelian = await resPembelian.json();
+             const isOwned = pembelian.find(p => p.id_barang == resellId && p.status === 'Lunas');
+             if (!isOwned) {
+                 alert("Anda tidak memiliki barang ini atau pembayaran belum lunas.");
+                 window.location.href = "barang-saya.html";
+                 return;
+             }
+             
+             const res = await fetch('/barang/' + resellId);
+             const barang = await res.json();
+             document.getElementById('namaBarang').value = barang.nama_barang;
+             document.getElementById('deskripsi').value = barang.deskripsi;
+             
+             if (barang.gambar) {
+                 uploadedImageData = barang.gambar;
+                 const previewContainer = document.getElementById('previewContainer');
+                 previewContainer.innerHTML = '<div style="position:relative;display:inline-block;">' +
+                   '<img src="' + barang.gambar + '" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid #b8860b;">' +
+                   '<button type="button" onclick="this.parentElement.remove(); uploadedImageData=null;" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:none;background:#c0392b;color:white;font-size:12px;cursor:pointer;">✕</button>' +
+                   '</div>';
+             }
+             
+             document.querySelector('h1').textContent = "Jual Kembali Barang";
+             document.querySelector('p').textContent = "Atur harga awal dan durasi untuk melelang kembali barang ini";
+          } catch(e) {}
+      }
+    });
+
   </script>
 </body>
 
