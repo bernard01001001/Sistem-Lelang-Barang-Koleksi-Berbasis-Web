@@ -126,7 +126,7 @@ async function renderGridProduk() {
       if (startDate > now) {
          metaStatus = "Akan Datang: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'});
       } else if (endDate > now) {
-         metaStatus = "Berjalan (Sisa: " + endDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
+         metaStatus = "Berjalan (Dimulai: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
       } else {
          metaStatus = "Berakhir";
       }
