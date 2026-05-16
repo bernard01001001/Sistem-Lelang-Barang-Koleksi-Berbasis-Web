@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // SIGNUP
 router.post('/signup', async (req, res) => {
@@ -11,7 +11,8 @@ router.post('/signup', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const inputRole = role ? role.toLowerCase() : 'penawar';
-        const validRoles = ['admin', 'pelelang', 'penawar'];
+        // 'admin' is explicitly removed from valid registration roles
+        const validRoles = ['pelelang', 'penawar'];
         const userRole = validRoles.includes(inputRole) ? inputRole : 'penawar';
 
         const result = await db.query(
@@ -24,6 +25,9 @@ router.post('/signup', async (req, res) => {
             user: result.rows[0] 
         });
     } catch (err) {
+        if (err.code === '23505') {
+            return res.status(400).json({ error: "Email telah digunakan" });
+        }
         res.status(500).json({ error: err.message });
     }
 });
@@ -44,7 +48,7 @@ router.post('/login', async (req, res) => {
         res.json({ 
             message: "Login berhasil", 
             user: { 
-                id: user.id_user, 
+                id_user: user.id_user, 
                 nama: user.nama,
                 role: user.role 
             } 

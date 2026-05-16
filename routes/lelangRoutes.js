@@ -6,7 +6,16 @@ router.post('/bid', async (req, res) => {
     const { id_barang, id_user, harga_penawaran } = req.body;
 
     try {
-        // 1. Ambil data barang (Cukup satu kali query untuk semua info)
+        // 1. Cek peran user
+        const userCheck = await db.query("SELECT role FROM tbl_user WHERE id_user = $1", [id_user]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ message: "User tidak ditemukan." });
+        }
+        if (userCheck.rows[0].role === 'pelelang') {
+            return res.status(403).json({ message: "Pelelang tidak diizinkan untuk menawar barang." });
+        }
+
+        // 2. Ambil data barang (Cukup satu kali query untuk semua info)
         const barangResult = await db.query(
             "SELECT status_lelang, harga_awal, tanggal_selesai FROM tbl_barang WHERE id_barang = $1", 
             [id_barang]
@@ -33,11 +42,22 @@ router.post('/bid', async (req, res) => {
 
         // 4. Cek Bid Tertinggi saat ini
         const maxBidCheck = await db.query(
-            "SELECT MAX(harga_penawaran) as current_max FROM tbl_lelang WHERE id_barang = $1",
+            "SELECT id_user, harga_penawaran FROM tbl_lelang WHERE id_barang = $1 ORDER BY harga_penawaran DESC LIMIT 1",
             [id_barang]
         );
 
-        const currentMax = maxBidCheck.rows[0].current_max || harga_awal;
+        let currentMax = harga_awal;
+        let lastBidderId = null;
+
+        if (maxBidCheck.rows.length > 0) {
+            currentMax = maxBidCheck.rows[0].harga_penawaran;
+            lastBidderId = maxBidCheck.rows[0].id_user;
+        }
+
+        // Cek apakah user yang sama mencoba menawar berturut-turut
+        if (lastBidderId == id_user) {
+            return res.status(400).json({ message: "Anda adalah penawar tertinggi saat ini. Tunggu orang lain menawar lebih dulu." });
+        }
 
         // 5. Validasi: Harga baru harus lebih tinggi dari penawaran tertinggi
         if (harga_penawaran <= currentMax) {
@@ -74,6 +94,19 @@ router.get('/my-wins/:userId', async (req, res) => {
              AND b.status_lelang = 'selesai' 
              AND l.harga_penawaran = (SELECT MAX(harga_penawaran) FROM tbl_lelang WHERE id_barang = b.id_barang)`,
             [req.params.userId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// RIWAYAT BID (BID HISTORY)
+router.get('/history/:id_barang', async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT id_user, harga_penawaran, created_at FROM tbl_lelang WHERE id_barang = $1 ORDER BY harga_penawaran DESC",
+            [req.params.id_barang]
         );
         res.json(result.rows);
     } catch (err) {

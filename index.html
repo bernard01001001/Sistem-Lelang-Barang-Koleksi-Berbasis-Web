@@ -18,91 +18,12 @@
       <p>Platform lelang online untuk barang-barang koleksi dan antik</p>
     </div>
 
-    <h2 class="section-title">Penawaran Hari Ini</h2>
+    <h2 class="section-title">Penawaran & Lelang Hari Ini</h2>
     <div id="grid-produk" class="grid"></div>
-
-    <!-- ==================== LELANG SEDANG BERLANGSUNG (dengan countdown) ==================== -->
-    <div class="section">
-      <div class="section-title">
-        <h2>Lelang Sedang Berlangsung</h2>
-        <a href="pages/lelang-aktif.html" style="color:#b8860b; font-size:14px;">Lihat Semua →</a>
-      </div>
-
-      <div id="beranda-lelang-grid" class="grid"
-        style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:16px;"></div>
-    </div>
   </div>
 
   <div id="footer"></div>
-  <script src="assets/js/script.js?v=2"></script>
+  <script src="assets/js/script.js?v=5"></script>
 
-  <script>
-    // Data lelang untuk Beranda — endTime disimpan di localStorage agar tidak reset
-    const berandaLelangDefaults = [
-      { id: 2, key: "lelang_guci", nama: "Guci Keramik Bunga Eropa", harga: 3700000, durasiMs: 1000 * 60 * 90, gambar: "assets/images/produk/european-ceramic-flower-vase-antique.jpg" },
-      { id: 9, key: "lelang_radio", nama: "Radio Vintage Merah", harga: 700000, durasiMs: 1000 * 60 * 45, gambar: "assets/images/produk/red-vintage-retro-radio.jpg" },
-      { id: 10, key: "lelang_gitar", nama: "Gitar Listrik Klasik Hijau", harga: 2700000, durasiMs: 1000 * 60 * 65, gambar: "assets/images/produk/green-classic-electric-guitar.jpg" },
-      { id: 8, key: "lelang_flatshoes", nama: "Flatshoes Hijau Gucci", harga: 1800000, durasiMs: 1000 * 60 * 130, gambar: "assets/images/produk/green-gucci-flat-shoes-luxury.jpg" }
-    ];
-
-    // Ambil atau buat endTime yang tersimpan di localStorage
-    function getPersistedEndTime(key, durasiMs) {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        return parseInt(stored, 10);
-      }
-      const endTime = Date.now() + durasiMs;
-      localStorage.setItem(key, endTime.toString());
-      return endTime;
-    }
-
-    let berandaLelangItems = berandaLelangDefaults.map(item => ({
-      id: item.id,
-      nama: item.nama,
-      harga: item.harga,
-      gambar: item.gambar,
-      endTime: getPersistedEndTime(item.key, item.durasiMs)
-    }));
-
-    function formatCountdown(ms) {
-      if (ms <= 0) return "Lelang telah berakhir";
-      const hours = Math.floor(ms / (1000 * 60 * 60));
-      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    function renderBerandaLelang() {
-      const grid = document.getElementById("beranda-lelang-grid");
-      let html = "";
-
-      berandaLelangItems.forEach(function(item) {
-        const timeLeft = item.endTime - Date.now();
-        const countdownText = formatCountdown(timeLeft);
-
-        html += 
-          '<a href="pages/produk.html?id=' + item.id + '#' + item.id + '" onclick="localStorage.setItem(\'koleku_last_viewed_id\', ' + item.id + ')" style="text-decoration:none; color:inherit;">' +
-            '<div class="card" style="cursor:pointer;">' +
-              '<img src="' + item.gambar + '" alt="' + item.nama + '" style="width:100%; height:160px; object-fit:cover;">' +
-              '<div class="body">' +
-                '<div class="title">' + item.nama + '</div>' +
-                '<div class="price">Rp ' + item.harga.toLocaleString('id-ID') + '</div>' +
-                '<div style="margin-top:8px; color:#c0392b; font-weight:bold; font-size:14px;">' +
-                  '⏳ ' + countdownText +
-                '</div>' +
-              '</div>' +
-            '</div>' +
-          '</a>';
-      });
-
-      grid.innerHTML = html;
-    }
-
-    // Jalankan countdown di Beranda
-    document.addEventListener("DOMContentLoaded", () => {
-      renderBerandaLelang();
-      setInterval(renderBerandaLelang, 1000);
-    });
-  </script>
-
+</body>
 </html>

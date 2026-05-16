@@ -1,0 +1,1 @@
+const db = require('./config/db'); async function run() { try { await db.query('ALTER TABLE tbl_barang ADD COLUMN kategori VARCHAR(100) DEFAULT ''Lainnya'''); console.log('Column added'); } catch(e) { console.error(e); } process.exit(); } run();

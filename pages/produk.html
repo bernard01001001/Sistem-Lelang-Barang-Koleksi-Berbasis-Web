@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="../assets/css/styles.css">
   <link rel="icon" href="../assets/images/logo.png">
   <style>
-    #tawar-input::-webkit-outer-spin-button,
-    #tawar-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    #tawar-input { -moz-appearance: textfield; }
+    #bid-input::-webkit-outer-spin-button,
+    #bid-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #bid-input { -moz-appearance: textfield; }
   </style>
 </head>
 
@@ -18,8 +18,8 @@
   <div id="navbar"></div>
 
   <div class="container">
-    <!-- ==================== DETAIL PRODUK DENGAN COUNTDOWN ==================== -->
-    <div id="detail-produk-container" class="detail-container"
+    <!-- ==================== DETAIL PRODUK ==================== -->
+    <div id="detail-produk" class="detail-container"
       style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin:30px 0;">
       <!-- Akan diisi oleh JavaScript -->
     </div>
@@ -29,212 +29,6 @@
   </div>
 
   <div id="footer"></div>
-  <script src="../assets/js/script.js?v=2"></script>
-
-  <script>
-    // Ambil produk dari URL hash, parameter, atau localStorage
-    function getProdukFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      let idParam = params.get("id");
-
-      // Coba ambil dari Hash URL (contoh: produk.html#9)
-      const hash = window.location.hash;
-      if (hash && hash.length > 1) {
-        idParam = hash.substring(1); // ambil angka setelah #
-        console.log("Debug: Menerima ID dari Hash =", idParam);
-      } else {
-        console.log("Debug: Menerima idParam dari URL =", idParam);
-      }
-
-      // Fallback ke localStorage jika URL param & hash hilang
-      if (!idParam) {
-        idParam = localStorage.getItem("koleku_last_viewed_id");
-        console.log("Debug: Mencoba fallback ke localStorage =", idParam);
-      }
-
-      if (!idParam) {
-        console.warn("Debug: Tidak ada ID di URL, Hash, maupun localStorage!");
-        return produkList[0];
-      }
-
-      const id = parseInt(idParam);
-      const found = produkList.find(function (p) {
-        return p.id === id;
-      });
-
-      if (found) {
-        console.log("Debug: Produk ditemukan =", found.nama);
-        localStorage.setItem("koleku_last_viewed_id", id);
-        return found;
-      }
-
-      console.warn("Debug: Produk ID " + id + " tidak ditemukan!");
-      return produkList[0];
-    }
-
-    // Render detail produk secara dinamis
-    function renderDetailDinamis() {
-      const produk = getProdukFromUrl();
-      const container = document.getElementById("detail-produk-container");
-
-      container.innerHTML = `
-        <!-- Gambar Produk -->
-        <div>
-          <img src="${produk.gambar}" alt="${produk.nama}" style="width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-        </div>
-
-        <!-- Informasi Produk -->
-        <div>
-          <h1>${produk.nama}</h1>
-          <p><strong>Kategori:</strong> ${produk.kategori}</p>
-          <p><strong>Deskripsi:</strong> ${produk.deskripsi}</p>
-
-          <div style="background:#f8f1e3; padding:15px; border-radius:6px; margin:15px 0;">
-            <p><strong>Harga Awal</strong></p>
-            <h2 style="color:#b8860b; margin:0;">Rp ${produk.hargaAwal.toLocaleString('id-ID')}</h2>
-          </div>
-
-          <div style="background:#f8f1e3; padding:15px; border-radius:6px; margin:15px 0;">
-            <p><strong>Harga Tertinggi Saat Ini</strong></p>
-            <h2 style="color:#b8860b; margin:0;">Rp ${produk.hargaTertinggi.toLocaleString('id-ID')}</h2>
-          </div>
-
-          <!-- COUNTDOWN TIMER -->
-          <div style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">
-            Sisa Waktu: <span id="countdown-detail" style="font-size:22px;">00:00:00</span>
-          </div>
-
-          <div style="margin-top:20px;">
-            <label style="font-weight:bold;font-size:14px;color:#555;margin-bottom:8px;display:block;">Masukkan Tawaran (min Rp ${(produk.hargaTertinggi + 50000).toLocaleString('id-ID')})</label>
-            <div style="display:flex;align-items:center;gap:0;border:2px solid #b8860b;border-radius:6px;overflow:hidden;background:white;">
-              <button type="button" onclick="kurangiTawaran()" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#f8f1e3,#efe6d5);font-size:22px;font-weight:bold;color:#b8860b;cursor:pointer;" onmouseover="this.style.background='#e8d9c0'" onmouseout="this.style.background='linear-gradient(135deg,#f8f1e3,#efe6d5)'">−</button>
-              <input type="number" id="tawar-input" value="${produk.hargaTertinggi + 50000}" min="${produk.hargaTertinggi + 50000}" style="flex:1;border:none;border-left:1px solid #e5d9c8;border-right:1px solid #e5d9c8;text-align:center;font-size:18px;font-weight:bold;padding:12px;outline:none;" oninput="updateTawarPreview()">
-              <button type="button" onclick="tambahTawaran()" style="width:50px;height:48px;border:none;background:linear-gradient(135deg,#b8860b,#d4a017);font-size:22px;font-weight:bold;color:white;cursor:pointer;" onmouseover="this.style.background='#a07509'" onmouseout="this.style.background='linear-gradient(135deg,#b8860b,#d4a017)'">+</button>
-            </div>
-            <div id="tawar-preview" style="margin-top:8px;font-size:14px;color:#b8860b;font-weight:600;">Rp ${(produk.hargaTertinggi + 50000).toLocaleString('id-ID')}</div>
-            <div style="margin-top:4px;font-size:11px;color:#999;">Tombol +/- menambah/kurangi 10% dari harga awal</div>
-            <button onclick="kirimTawar()" class="btn" style="margin-top:10px; width:100%; padding:14px; font-size:16px;">Tawar</button>
-            <a href="checkout.html?id=${produk.id}" class="btn" style="display:block; text-align:center; margin-top:10px; width:100%; padding:14px; font-size:16px; box-sizing:border-box;">Beli Sekarang</a>
-          </div>
-        </div>
-      `;
-
-      // Update title halaman
-      document.title = produk.nama + " - KOLEKU";
-    }
-
-    // Render Barang Serupa (tanpa produk yang sedang dilihat)
-    function renderBarangSerupa() {
-      const produk = getProdukFromUrl();
-      const grid = document.getElementById("grid-produk");
-      if (!grid) return;
-
-      let html = "";
-      for (let i = 0; i < produkList.length; i++) {
-        const p = produkList[i];
-        if (p.id === produk.id) continue; // skip produk yang sedang dilihat
-
-        html +=
-          '<div class="card" style="cursor:pointer;" onclick="window.location.href=\'produk.html?id=' + p.id + '\'">' +
-          '<img src="' + p.gambar + '" alt="' + p.nama + '" style="width:100%; height:160px; object-fit:cover;">' +
-          '<div class="body">' +
-          '<div class="title">' + p.nama + '</div>' +
-          '<div class="price">' + formatRupiah(p.hargaTertinggi) + '</div>' +
-          '<div class="meta">Sisa: ' + p.sisaWaktu + '</div>' +
-          '</div>' +
-          '</div>';
-      }
-      grid.innerHTML = html;
-    }
-
-    // Countdown untuk halaman detail produk — endTime disimpan di localStorage
-    function startDetailCountdown() {
-      const produk = getProdukFromUrl();
-      const storageKey = "lelang_detail_" + produk.id;
-      const durasiMs = (2 * 24 * 60 * 60 * 1000) + (5 * 60 * 60 * 1000); // 2 hari 5 jam
-
-      let endTime;
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        endTime = parseInt(stored, 10);
-      } else {
-        endTime = Date.now() + durasiMs;
-        localStorage.setItem(storageKey, endTime.toString());
-      }
-
-      function updateCountdown() {
-        const timeLeft = endTime - Date.now();
-        const countdownEl = document.getElementById("countdown-detail");
-        if (!countdownEl) return;
-
-        if (timeLeft <= 0) {
-          countdownEl.textContent = "Lelang telah berakhir";
-          return;
-        }
-
-        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-
-        countdownEl.textContent = `${days} hari ${hours} jam ${minutes} menit ${seconds} detik`;
-      }
-
-      updateCountdown();
-      setInterval(updateCountdown, 1000);
-    }
-
-    function tambahTawaran() {
-      const produk = getProdukFromUrl();
-      const input = document.getElementById('tawar-input');
-      const current = parseInt(input.value) || 0;
-      const step = Math.round(produk.hargaAwal * 0.10); // 10% of harga awal
-      input.value = current + step;
-      updateTawarPreview();
-    }
-
-    function kurangiTawaran() {
-      const produk = getProdukFromUrl();
-      const input = document.getElementById('tawar-input');
-      const current = parseInt(input.value) || 0;
-      const minBid = produk.hargaTertinggi + 50000;
-      const step = Math.round(produk.hargaAwal * 0.10); // 10% of harga awal
-      let newVal = current - step;
-      if (newVal < minBid) newVal = minBid;
-      input.value = newVal;
-      updateTawarPreview();
-    }
-
-    function updateTawarPreview() {
-      const produk = getProdukFromUrl();
-      const input = document.getElementById('tawar-input');
-      const minBid = produk.hargaTertinggi + 50000;
-      let val = parseInt(input.value) || 0;
-      if (val < minBid) {
-        input.value = minBid;
-        val = minBid;
-      }
-      const preview = document.getElementById('tawar-preview');
-      if (preview) preview.textContent = 'Rp ' + val.toLocaleString('id-ID');
-    }
-
-    function kirimTawar() {
-      const produk = getProdukFromUrl();
-      const nilai = parseInt(document.getElementById("tawar-input").value) || 0;
-      const minBid = produk.hargaTertinggi + 50000;
-      if (nilai < minBid) {
-        alert("Tawaran minimum adalah Rp " + minBid.toLocaleString('id-ID'));
-        return;
-      }
-      alert("✅ Tawaran Rp " + nilai.toLocaleString('id-ID') + " berhasil dikirim!");
-    }
-
-    // Jalankan saat halaman dimuat
-    document.addEventListener("DOMContentLoaded", () => {
-      renderDetailDinamis();
-      renderBarangSerupa();
-      startDetailCountdown();
-    });
-  </script>
-
+  <script src="../assets/js/script.js?v=5"></script>
+</body>
 </html>

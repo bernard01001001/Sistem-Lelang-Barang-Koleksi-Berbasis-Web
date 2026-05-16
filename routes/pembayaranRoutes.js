@@ -1,29 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const { sql, getConnection } = require('../config/db');
+const { query } = require('../config/db');
 
 // --- CREATE TRANSACTION ---
 router.post('/create', async (req, res) => {
     try {
         const { id_user, id_barang, total, metode, status, virtual_account, batas_waktu } = req.body;
-        const pool = await getConnection();
+        
+        // 1. Cek peran user
+        const userCheck = await query("SELECT role FROM tbl_user WHERE id_user = $1", [id_user]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ message: "User tidak ditemukan." });
+        }
+        if (userCheck.rows[0].role === 'pelelang') {
+            return res.status(403).json({ message: "Pelelang tidak diizinkan untuk membeli barang." });
+        }
 
-        const result = await pool.request()
-            .input('id_user', sql.Int, id_user)
-            .input('id_barang', sql.Int, id_barang)
-            .input('total', sql.Decimal(18, 2), total)
-            .input('metode', sql.VarChar, metode)
-            .input('status', sql.VarChar, status || 'Menunggu Pembayaran')
-            .input('virtual_account', sql.VarChar, virtual_account || null)
-            .input('batas_waktu', sql.DateTime, batas_waktu ? new Date(batas_waktu) : null)
-            .query(`INSERT INTO tbl_pembayaran 
-                    (id_user, id_barang, total, metode, status, virtual_account, batas_waktu, created_at) 
-                    OUTPUT INSERTED.id_pembayaran
-                    VALUES (@id_user, @id_barang, @total, @metode, @status, @virtual_account, @batas_waktu, GETDATE())`);
+        const q = `INSERT INTO tbl_pembayaran 
+                   (id_user, id_barang, total, metode, status, virtual_account, batas_waktu, created_at) 
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
+                   RETURNING id_pembayaran`;
+        
+        const values = [
+            id_user, 
+            id_barang, 
+            total, 
+            metode, 
+            status || 'Menunggu Pembayaran', 
+            virtual_account || null, 
+            batas_waktu ? new Date(batas_waktu) : null
+        ];
+        
+        const result = await query(q, values);
 
         res.status(201).json({ 
             message: "Transaksi berhasil dibuat!", 
-            id_pembayaran: result.recordset[0].id_pembayaran 
+            id_pembayaran: result.rows[0].id_pembayaran 
         });
     } catch (err) {
         res.status(500).send("Gagal membuat transaksi: " + err.message);
@@ -34,16 +46,13 @@ router.post('/create', async (req, res) => {
 router.get('/:trx', async (req, res) => {
     try {
         const { trx } = req.params;
-        const pool = await getConnection();
+        
+        const result = await query("SELECT * FROM tbl_pembayaran WHERE id_pembayaran = $1", [trx]);
 
-        const result = await pool.request()
-            .input('trx', sql.Int, trx)
-            .query("SELECT * FROM tbl_pembayaran WHERE id_pembayaran = @trx");
-
-        if (result.recordset.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ message: "Transaksi tidak ditemukan" });
         }
-        res.json(result.recordset[0]);
+        res.json(result.rows[0]);
     } catch (err) {
         res.status(500).send(err.message);
     }
@@ -53,11 +62,17 @@ router.get('/:trx', async (req, res) => {
 router.put('/confirm/:trx', async (req, res) => {
     try {
         const { trx } = req.params;
-        const pool = await getConnection();
+        
+        // 1. Update status pembayaran menjadi Lunas
+        await query("UPDATE tbl_pembayaran SET status = 'Lunas', paid_at = NOW() WHERE id_pembayaran = $1", [trx]);
 
-        await pool.request()
-            .input('trx', sql.Int, trx)
-            .query("UPDATE tbl_pembayaran SET status = 'Lunas', paid_at = GETDATE() WHERE id_pembayaran = @trx");
+        // 2. Ambil id_barang dari transaksi ini & ambil id_user (pembeli)
+        const trxResult = await query("SELECT id_barang, id_user FROM tbl_pembayaran WHERE id_pembayaran = $1", [trx]);
+        if (trxResult.rows.length > 0) {
+            const { id_barang, id_user } = trxResult.rows[0];
+            // 3. Update status barang menjadi 'terjual' dan set pemenang
+            await query("UPDATE tbl_barang SET status_lelang = 'terjual', id_pemenang = $1 WHERE id_barang = $2", [id_user, id_barang]);
+        }
 
         res.json({ message: "Pembayaran dikonfirmasi!" });
     } catch (err) {
@@ -69,13 +84,10 @@ router.put('/confirm/:trx', async (req, res) => {
 router.get('/user/:id_user', async (req, res) => {
     try {
         const { id_user } = req.params;
-        const pool = await getConnection();
+        
+        const result = await query("SELECT p.*, b.nama_barang FROM tbl_pembayaran p LEFT JOIN tbl_barang b ON p.id_barang = b.id_barang WHERE p.id_user = $1 ORDER BY p.created_at DESC", [id_user]);
 
-        const result = await pool.request()
-            .input('id_user', sql.Int, id_user)
-            .query("SELECT p.*, b.nama_barang FROM tbl_pembayaran p LEFT JOIN tbl_barang b ON p.id_barang = b.id_barang WHERE p.id_user = @id_user ORDER BY p.created_at DESC");
-
-        res.json(result.recordset);
+        res.json(result.rows);
     } catch (err) {
         res.status(500).send(err.message);
     }
