@@ -110,6 +110,10 @@ async function renderGridProduk() {
     if (isLelangAktifPage) {
        displayList = produkList.filter(p => new Date(p.tanggal_mulai) <= now);
     }
+    
+    if (window.kategoriAktif && window.kategoriAktif !== 'all') {
+       displayList = displayList.filter(p => p.kategori === window.kategoriAktif);
+    }
 
     if(displayList.length === 0) {
        grid.innerHTML = "<p>Tidak ada barang lelang saat ini.</p>";

@@ -4,17 +4,18 @@ const db = require('../config/db');
 
 // TAMBAH BARANG
 router.post('/', async (req, res) => {
-    const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam, tanggal_mulai } = req.body;
+    const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam, tanggal_mulai, kategori } = req.body;
     try {
         const durasi = parseInt(durasi_jam) || 24;
         let queryInsert, queryParams;
+        const kat = kategori || 'Lainnya';
 
         if (tanggal_mulai) {
-            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, $7, $7::timestamp + INTERVAL '1 hour' * $8, 'berjalan') RETURNING *";
-            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', tanggal_mulai, durasi];
+            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_mulai, tanggal_selesai, status_lelang, kategori) VALUES ($1, $2, $3, $4, $5, $6, $7, $7::timestamp + INTERVAL '1 hour' * $8, 'berjalan', $9) RETURNING *";
+            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', tanggal_mulai, durasi, kat];
         } else {
-            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_mulai, tanggal_selesai, status_lelang) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW() + INTERVAL '1 hour' * $7, 'berjalan') RETURNING *";
-            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', durasi];
+            queryInsert = "INSERT INTO tbl_barang (nama_barang, harga_awal, deskripsi, id_user, status, gambar, tanggal_mulai, tanggal_selesai, status_lelang, kategori) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW() + INTERVAL '1 hour' * $7, 'berjalan', $8) RETURNING *";
+            queryParams = [nama_barang, harga_awal, deskripsi, id_user, 'approved', gambar || '', durasi, kat];
         }
 
         const result = await db.query(queryInsert, queryParams);
