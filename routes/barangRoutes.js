@@ -28,12 +28,12 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         // Gabungkan dengan harga tertinggi dari lelang
-        // HANYA tampilkan barang yang berstatus approved dan belum selesai
+        // Tampilkan semua barang approved (termasuk yang selesai/terjual)
         const result = await db.query(`
             SELECT b.*, 
                    COALESCE((SELECT MAX(harga_penawaran) FROM tbl_lelang l WHERE l.id_barang = b.id_barang), b.harga_awal) as harga_tertinggi
             FROM tbl_barang b 
-            WHERE b.status = 'approved' AND b.status_lelang != 'selesai'
+            WHERE b.status = 'approved'
         `);
         res.json(result.rows);
     } catch (err) {

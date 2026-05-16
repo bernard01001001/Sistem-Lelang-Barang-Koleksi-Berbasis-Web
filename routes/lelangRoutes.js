@@ -42,11 +42,22 @@ router.post('/bid', async (req, res) => {
 
         // 4. Cek Bid Tertinggi saat ini
         const maxBidCheck = await db.query(
-            "SELECT MAX(harga_penawaran) as current_max FROM tbl_lelang WHERE id_barang = $1",
+            "SELECT id_user, harga_penawaran FROM tbl_lelang WHERE id_barang = $1 ORDER BY harga_penawaran DESC LIMIT 1",
             [id_barang]
         );
 
-        const currentMax = maxBidCheck.rows[0].current_max || harga_awal;
+        let currentMax = harga_awal;
+        let lastBidderId = null;
+
+        if (maxBidCheck.rows.length > 0) {
+            currentMax = maxBidCheck.rows[0].harga_penawaran;
+            lastBidderId = maxBidCheck.rows[0].id_user;
+        }
+
+        // Cek apakah user yang sama mencoba menawar berturut-turut
+        if (lastBidderId == id_user) {
+            return res.status(400).json({ message: "Anda adalah penawar tertinggi saat ini. Tunggu orang lain menawar lebih dulu." });
+        }
 
         // 5. Validasi: Harga baru harus lebih tinggi dari penawaran tertinggi
         if (harga_penawaran <= currentMax) {

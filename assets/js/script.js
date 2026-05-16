@@ -163,12 +163,14 @@ async function renderGridProduk() {
       var endDate = new Date(p.tanggal_selesai);
       
       var metaStatus = "";
-      if (startDate > now) {
+      if (p.status_lelang === 'terjual') {
+         metaStatus = '<span style="color:#27ae60;font-weight:bold;">Sudah Dibeli</span>';
+      } else if (p.status_lelang === 'selesai' || endDate <= now) {
+         metaStatus = '<span style="color:#c0392b;font-weight:bold;">Lelang Berakhir</span>';
+      } else if (startDate > now) {
          metaStatus = "Akan Datang: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'});
-      } else if (endDate > now) {
-         metaStatus = "Berjalan (Dimulai: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
       } else {
-         metaStatus = "Berakhir";
+         metaStatus = "Berjalan (Dimulai: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) + ")";
       }
 
       html +=
@@ -211,9 +213,13 @@ async function renderDetailProduk() {
     var isUpcoming = startDate > now;
     var sisaWaktuStr = "Waktu Habis";
     
-    if (isUpcoming) {
+    if (produk.status_lelang === 'terjual') {
+        sisaWaktuStr = "Barang Sudah Dibeli";
+    } else if (produk.status_lelang === 'selesai' || new Date(produk.tanggal_selesai) <= now) {
+        sisaWaktuStr = "Lelang Berakhir";
+    } else if (isUpcoming) {
         sisaWaktuStr = "Dimulai pada: " + startDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'});
-    } else if (new Date(produk.tanggal_selesai) > now) {
+    } else {
         sisaWaktuStr = new Date(produk.tanggal_selesai).toLocaleString();
     }
 
@@ -240,8 +246,19 @@ async function renderDetailProduk() {
 
     html += '<div class="timer" style="background:#c0392b; color:white; padding:12px 20px; border-radius:6px; text-align:center; font-weight:bold; font-size:18px; margin:20px 0;">' + (isUpcoming ? 'Lelang Dimulai Dalam:' : 'Sisa Waktu:') + ' <span id="countdown-detail" style="font-size:22px;">Menghitung...</span></div>';
 
+    var isSold = produk.status_lelang === 'terjual';
+    var isEnded = produk.status_lelang === 'selesai' || new Date(produk.tanggal_selesai) <= now;
+
     var user = getUser();
-    if (isUpcoming) {
+    if (isSold) {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; text-align: center; color: #2e7d32;">' +
+                '<strong>Barang ini sudah dibeli.</strong>' +
+                '</div>';
+    } else if (isEnded) {
+        html += '<div style="margin-top: 15px; padding: 10px; background-color: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; text-align: center; color: #c62828;">' +
+                '<strong>Lelang telah berakhir.</strong>' +
+                '</div>';
+    } else if (isUpcoming) {
         html += '<div style="margin-top: 15px; padding: 10px; background-color: #f8f1e3; border: 1px solid #e5d9c8; border-radius: 8px; text-align: center; color: #b8860b;">' +
                 '<strong>Lelang Belum Dimulai</strong><br>Barang ini dijadwalkan untuk lelang pada tanggal ' + startDate.toLocaleDateString('id-ID') + '.' +
                 '</div>';
@@ -273,23 +290,26 @@ async function renderDetailProduk() {
     html += '</div>';
 
     detail.innerHTML = html;
-    startDynamicCountdown(produk.tanggal_mulai, produk.tanggal_selesai, isUpcoming);
     
-    // Polling harga tertinggi
-    if (window.bidPollInterval) clearInterval(window.bidPollInterval);
-    if (!isUpcoming && new Date(produk.tanggal_selesai) > now) {
-      window.bidPollInterval = setInterval(async () => {
-        try {
-          const pollRes = await fetch('/barang/' + id);
-          if (pollRes.ok) {
-            const pollData = await pollRes.json();
-            const displayEl = document.getElementById('harga-tertinggi-display');
-            if (displayEl) {
-              displayEl.textContent = formatRupiah(pollData.harga_tertinggi || pollData.harga_awal);
-            }
-          }
-        } catch(e) {}
-      }, 5000);
+    if (!isSold && !isEnded) {
+        startDynamicCountdown(produk.tanggal_mulai, produk.tanggal_selesai, isUpcoming);
+        
+        // Polling harga tertinggi
+        if (window.bidPollInterval) clearInterval(window.bidPollInterval);
+        if (!isUpcoming && new Date(produk.tanggal_selesai) > now) {
+          window.bidPollInterval = setInterval(async () => {
+            try {
+              const pollRes = await fetch('/barang/' + id);
+              if (pollRes.ok) {
+                const pollData = await pollRes.json();
+                const displayEl = document.getElementById('harga-tertinggi-display');
+                if (displayEl) {
+                  displayEl.textContent = formatRupiah(pollData.harga_tertinggi || pollData.harga_awal);
+                }
+              }
+            } catch(e) {}
+          }, 5000);
+        }
     }
     
     // Render Riwayat Bid
