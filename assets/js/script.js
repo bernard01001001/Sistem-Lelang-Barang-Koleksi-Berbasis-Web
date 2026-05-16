@@ -116,6 +116,7 @@ async function renderGridProduk() {
        return;
     }
 
+    var html = "";
     for (var i = 0; i < displayList.length; i++) {
       var p = displayList[i];
       var startDate = new Date(p.tanggal_mulai);
