@@ -138,9 +138,11 @@ async function renderGridProduk() {
   if (!grid) return;
 
   try {
+
     const res = await fetch('/barang');
     const data = await res.json();
     window.produkList = data; // Simpan secara global
+
     
     var pp = getPagePrefix();
     let displayList = window.produkList;
@@ -200,7 +202,7 @@ async function renderDetailProduk() {
   if(!id) return;
 
   try {
-    const res = await fetch('/barang/' + id);
+    const res = await fetch('http://localhost:3000/barang/' + id);
     if(!res.ok) {
        detail.innerHTML = "<p>Produk tidak ditemukan.</p>";
        return;
@@ -407,6 +409,7 @@ async function kirimBid(e, id_barang) {
   }
   
   try {
+
       const res = await fetch('/lelang/bid', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
@@ -486,7 +489,6 @@ async function renderRiwayatBid(id_barang) {
      html += '</ul>';
      historyEl.innerHTML = html;
   } catch(e) {}
-}
 
 // === CHECKOUT STATE ===
 var checkoutStep = 1;
@@ -503,7 +505,7 @@ async function renderCheckout() {
   if(!id) return;
   
   try {
-    const res = await fetch('/barang/' + id);
+    const res = await fetch('http://localhost:3000/barang/' + id);
     if(!res.ok) return;
     const produk = await res.json();
 
@@ -594,9 +596,11 @@ async function renderStep3Review() {
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get("id");
+
   var isBuyNow = params.get("type") === "buynow";
   
   const res = await fetch('/barang/' + id);
+
   const produk = await res.json();
   var ongkir = 25000;
   
@@ -630,7 +634,7 @@ async function bayar() {
   var id = params.get("id");
   var isBuyNow = params.get("type") === "buynow";
 
-  const resBarang = await fetch('/barang/' + id);
+  const resBarang = await fetch('http://localhost:3000/barang/' + id);
   const produk = await resBarang.json();
   
   var basePrice = Number(produk.harga_tertinggi || produk.harga_awal);
@@ -648,7 +652,7 @@ async function bayar() {
   if (selectedPaymentMethod === 'bank') vaNumber = '8800' + Math.floor(10000000 + Math.random() * 90000000);
 
   try {
-     const res = await fetch('/pembayaran/create', {
+     const res = await fetch('http://localhost:3000/pembayaran/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -683,7 +687,7 @@ async function renderProsesPembayaran() {
   if(!trx) return;
 
   try {
-     const res = await fetch('/pembayaran/' + trx);
+     const res = await fetch('http://localhost:3000/pembayaran/' + trx);
      if(!res.ok) { box.innerHTML = "<p>Transaksi tidak ditemukan</p>"; return; }
      const data = await res.json();
 
@@ -703,7 +707,7 @@ async function renderProsesPembayaran() {
 
 async function konfirmasiPembayaran(trx) {
   try {
-     await fetch('/pembayaran/confirm/' + trx, { method: 'PUT' });
+     await fetch('http://localhost:3000/pembayaran/confirm/' + trx, { method: 'PUT' });
      window.location.href = "pembayaran.html?trx=" + trx;
   } catch(e) {}
 }
@@ -717,7 +721,7 @@ async function renderPembayaran() {
   if(!trx) return;
 
   try {
-     const res = await fetch('/pembayaran/' + trx);
+     const res = await fetch('http://localhost:3000/pembayaran/' + trx);
      const data = await res.json();
      box.innerHTML =
        '<div class="receipt-card">' +
@@ -739,7 +743,9 @@ async function renderBarangSaya() {
   }
 
   try {
+
      const res = await fetch('/pembayaran/user/' + user.id_user);
+
      const pembelian = await res.json();
      
      if (pembelian.length === 0) {
@@ -774,7 +780,7 @@ async function handleLogin(e) {
   var errorEl = document.getElementById("error");
 
   try {
-     const res = await fetch('/auth/login', {
+     const res = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -799,7 +805,7 @@ async function handleDaftar(e) {
   var errorEl = document.getElementById("error");
 
   try {
-     const res = await fetch('/auth/signup', {
+     const res = await fetch('http://localhost:3000/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nama: namaDepan + ' ' + namaBelakang, email, password, role: role })

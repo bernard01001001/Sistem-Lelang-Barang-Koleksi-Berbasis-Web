@@ -4,9 +4,11 @@ const db = require('../config/db');
 
 // TAMBAH BARANG
 router.post('/', async (req, res) => {
+
     try {
         const { nama_barang, harga_awal, deskripsi, id_user, gambar, durasi_jam, tanggal_mulai, kategori, harga_beli_langsung } = req.body;
         const durasi = parseInt(durasi_jam) || 24;
+
         let queryInsert, queryParams;
 
         if (tanggal_mulai) {
@@ -18,6 +20,7 @@ router.post('/', async (req, res) => {
         }
 
         const result = await db.query(queryInsert, queryParams);
+
         res.status(201).json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -28,7 +31,7 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         // Gabungkan dengan harga tertinggi dari lelang
-        // Tampilkan semua barang approved (termasuk yang selesai/terjual)
+
         const result = await db.query(`
             SELECT b.*, 
                    COALESCE((SELECT MAX(harga_penawaran) FROM tbl_lelang l WHERE l.id_barang = b.id_barang), b.harga_awal) as harga_tertinggi
